@@ -1,6 +1,7 @@
 # ===============================
 # Stage 1: Build Frontend
 # ===============================
+# Cache bust: 2025-12-28 fix
 FROM node:20-alpine AS frontend-builder
 
 WORKDIR /frontend
