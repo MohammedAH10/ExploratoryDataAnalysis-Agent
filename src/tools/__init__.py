@@ -141,11 +141,9 @@ from .plotly_visualizations import (
     generate_plotly_dashboard
 )
 
-# EDA Report Generation (3) - NEW PHASE 2
+# EDA Report Generation (1) - NEW PHASE 2
 from .eda_reports import (
-    generate_sweetviz_report,
-    generate_ydata_profiling_report,
-    generate_combined_eda_report
+    generate_ydata_profiling_report
 )
 
 # Code Interpreter (2) - NEW PHASE 2 - CRITICAL for True AI Agent
@@ -279,10 +277,8 @@ __all__ = [
     "generate_interactive_time_series",
     "generate_plotly_dashboard",
     
-    # EDA Report Generation (3) - NEW PHASE 2
-    "generate_sweetviz_report",
+    # EDA Report Generation (1) - NEW PHASE 2
     "generate_ydata_profiling_report",
-    "generate_combined_eda_report",
     
     # Code Interpreter (2) - NEW PHASE 2 - CRITICAL for True AI Agent
     "execute_python_code",

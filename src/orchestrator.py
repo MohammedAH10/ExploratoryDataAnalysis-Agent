@@ -104,10 +104,8 @@ from tools import (
     generate_interactive_box_plots,
     generate_interactive_time_series,
     generate_plotly_dashboard,
-    # EDA Report Generation (3) - NEW PHASE 2
-    generate_sweetviz_report,
+    # EDA Report Generation (1) - NEW PHASE 2
     generate_ydata_profiling_report,
-    generate_combined_eda_report,
     # Code Interpreter (2) - NEW PHASE 2 - TRUE AI AGENT CAPABILITY
     execute_python_code,
     execute_code_from_file,
@@ -332,10 +330,8 @@ class DataScienceCopilot:
             "generate_interactive_box_plots": generate_interactive_box_plots,
             "generate_interactive_time_series": generate_interactive_time_series,
             "generate_plotly_dashboard": generate_plotly_dashboard,
-            # EDA Report Generation (3) - NEW PHASE 2
-            "generate_sweetviz_report": generate_sweetviz_report,
+            # EDA Report Generation (1) - NEW PHASE 2
             "generate_ydata_profiling_report": generate_ydata_profiling_report,
-            "generate_combined_eda_report": generate_combined_eda_report,
             # Code Interpreter (2) - NEW PHASE 2 - TRUE AI AGENT CAPABILITY
             "execute_python_code": execute_python_code,
             "execute_code_from_file": execute_code_from_file,
@@ -668,7 +664,7 @@ Use specialized tools FIRST. Only use execute_python_code for:
 - NEW Automation: auto_ml_pipeline (zero-config full pipeline), auto_feature_selection
 - NEW Visualization: generate_all_plots, generate_data_quality_plots, generate_eda_plots, generate_model_performance_plots, generate_feature_importance_plot
 - NEW Interactive Plotly Visualizations: generate_interactive_scatter, generate_interactive_histogram, generate_interactive_correlation_heatmap, generate_interactive_box_plots, generate_interactive_time_series, generate_plotly_dashboard (interactive web-based plots with zoom/pan/hover)
-- NEW EDA Report Generation: generate_sweetviz_report (beautiful fast reports), generate_ydata_profiling_report (comprehensive detailed analysis), generate_combined_eda_report (both in one call)
+- NEW EDA Report Generation: generate_ydata_profiling_report (comprehensive detailed analysis with full statistics, distributions, correlations, and data quality insights)
 - NEW Enhanced Feature Engineering: create_ratio_features, create_statistical_features, create_log_features, create_binned_features
 
 **RULES:**

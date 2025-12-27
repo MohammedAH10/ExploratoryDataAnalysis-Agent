@@ -1431,29 +1431,12 @@ TOOLS = [
             }
         }
     },
-    # EDA Report Generation (3) - NEW PHASE 2
-    {
-        "type": "function",
-        "function": {
-            "name": "generate_sweetviz_report",
-            "description": "Generate beautiful HTML EDA report using Sweetviz. Creates stunning visualizations with target analysis, feature distributions, correlations, missing values. Fast and visually appealing. Supports dataset comparison (train vs test).",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "file_path": {"type": "string", "description": "Path to the dataset CSV/Parquet file"},
-                    "output_path": {"type": "string", "description": "Where to save HTML report (default: ./outputs/reports/sweetviz_report.html)"},
-                    "target_column": {"type": "string", "description": "Optional target variable for association analysis"},
-                    "compare_file_path": {"type": "string", "description": "Optional second dataset to compare (e.g., train vs test)"}
-                },
-                "required": ["file_path"]
-            }
-        }
-    },
+    # EDA Report Generation (1) - NEW PHASE 2
     {
         "type": "function",
         "function": {
             "name": "generate_ydata_profiling_report",
-            "description": "Generate comprehensive HTML report using ydata-profiling (formerly pandas-profiling). Provides extensive analysis: overview, variable statistics, interactions, correlations (Pearson, Spearman, Cramér's V), missing values matrix, duplicate analysis, and more. Most detailed profiling tool.",
+            "description": "Generate comprehensive HTML report using ydata-profiling (formerly pandas-profiling). Provides extensive analysis: overview, variable statistics, interactions, correlations (Pearson, Spearman, Cramér's V), missing values matrix, duplicate analysis, and more. Most detailed and comprehensive profiling tool with automated insights and data quality warnings.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -1461,23 +1444,6 @@ TOOLS = [
                     "output_path": {"type": "string", "description": "Where to save HTML report (default: ./outputs/reports/ydata_profile.html)"},
                     "minimal": {"type": "boolean", "description": "If true, generates faster minimal report (useful for large datasets, default: false)"},
                     "title": {"type": "string", "description": "Report title (default: 'Data Profiling Report')"}
-                },
-                "required": ["file_path"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "generate_combined_eda_report",
-            "description": "Generate BOTH Sweetviz and ydata-profiling reports in one call. Best of both worlds: Sweetviz for beautiful fast visualizations + ydata-profiling for comprehensive detailed analysis. Recommended for complete EDA.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "file_path": {"type": "string", "description": "Path to the dataset CSV/Parquet file"},
-                    "output_dir": {"type": "string", "description": "Directory to save both reports (default: ./outputs/reports)"},
-                    "target_column": {"type": "string", "description": "Optional target variable for Sweetviz analysis"},
-                    "minimal": {"type": "boolean", "description": "If true, uses minimal mode for ydata-profiling (default: false)"}
                 },
                 "required": ["file_path"]
             }

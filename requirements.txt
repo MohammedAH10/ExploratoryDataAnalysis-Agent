@@ -31,8 +31,7 @@ seaborn>=0.13.1
 plotly>=5.18.0  # Interactive visualizations
 
 # EDA Report Generation
-sweetviz>=2.3.1  # Beautiful fast EDA reports
-ydata-profiling>=4.17.0  # Updated for Python 3.13 compatibility
+ydata-profiling>=4.17.0  # Comprehensive automated EDA reports with Python 3.13 compatibility
 
 # User Interface
 # gradio>=5.49.1  # Replaced with React frontend
