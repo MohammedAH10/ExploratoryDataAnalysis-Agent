@@ -35,8 +35,13 @@ def generate_sweetviz_report(
         Dict with success status, report path, and summary
     """
     try:
-        import sweetviz as sv
+        import warnings
         import pandas as pd
+        
+        # Suppress NumPy deprecation warnings that Sweetviz triggers
+        warnings.filterwarnings('ignore', category=DeprecationWarning)
+        
+        import sweetviz as sv
         
         # Read dataset (Sweetviz requires pandas)
         if file_path.endswith('.csv'):
@@ -103,13 +108,26 @@ def generate_sweetviz_report(
         return {
             "success": False,
             "error": "Sweetviz not installed. Install with: pip install sweetviz",
-            "error_type": "MissingDependency"
+            "error_type": "MissingDependency",
+            "workaround": "Use generate_ydata_profiling_report as an alternative for comprehensive EDA reports."
         }
+    except AttributeError as e:
+        if "VisibleDeprecationWarning" in str(e) or "numpy" in str(e).lower():
+            return {
+                "success": False,
+                "error": "Sweetviz is incompatible with NumPy 2.x. NumPy version downgrade required.",
+                "error_type": "DependencyConflict",
+                "solution": "Downgrade NumPy to 1.x: py -m pip install 'numpy<2.0'",
+                "workaround": "Use generate_ydata_profiling_report instead - it's fully compatible with NumPy 2.x and provides more comprehensive analysis.",
+                "alternative_report_path": output_path.replace("sweetviz", "ydata_profile")
+            }
+        raise
     except Exception as e:
         return {
             "success": False,
             "error": f"Failed to generate Sweetviz report: {str(e)}",
-            "error_type": type(e).__name__
+            "error_type": type(e).__name__,
+            "workaround": "Try generate_ydata_profiling_report for a comprehensive EDA report instead."
         }
 
 
