@@ -70,9 +70,6 @@ ENV ARTIFACT_BACKEND=local
 # Cloud Run expects the service to listen on the PORT env variable
 EXPOSE 8080
 
-# Health check (optional, Cloud Run handles this)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8080/health')" || exit 1
+# Run the FastAPI application with uvicorn
+CMD ["uvicorn", "src.api.app:app", "--host", "0.0.0.0", "--port", "8080"]
 
-# Run the FastAPI application
-CMD ["python", "src/api/app.py"]
