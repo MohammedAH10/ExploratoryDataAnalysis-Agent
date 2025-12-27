@@ -1328,8 +1328,8 @@ You are a DOER. Complete workflows based on user intent."""
                 tools=gemini_tools
             )
             
-            # Start chat with the tool-configured model
-            gemini_chat = gemini_model_with_tools.start_chat(history=[], enable_automatic_function_calling=False)
+            # Start chat with the tool-configured model (no extra parameters)
+            gemini_chat = gemini_model_with_tools.start_chat(history=[])
         
         while iteration < max_iterations:
             iteration += 1
