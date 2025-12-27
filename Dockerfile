@@ -1,21 +1,24 @@
-# Multi-stage build for Google Cloud Run
+# ===============================
 # Stage 1: Build Frontend
-FROM node:20-alpine as frontend-builder
+# ===============================
+FROM node:20-alpine AS frontend-builder
 
 WORKDIR /frontend
 
-# Copy frontend files
 COPY FRRONTEEEND/package*.json ./
 RUN npm install
 
 COPY FRRONTEEEND/ ./
 RUN npm run build
 
-# Stage 2: Build Python environment
-FROM python:3.13-slim as builder
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# ===============================
+# Stage 2: Build Python environment
+# ===============================
+FROM python:3.12-slim AS builder
+
+# Install build dependencies (needed for ML wheels)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     make \
@@ -25,51 +28,56 @@ RUN apt-get update && apt-get install -y \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy requirements and install Python packages
+# Upgrade pip tooling
+RUN pip install --upgrade pip setuptools wheel
+
+# Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
+
+# ===============================
 # Stage 3: Runtime environment
-FROM python:3.13-slim
+# ===============================
+FROM python:3.12-slim
 
-# Install runtime dependencies only
-RUN apt-get update && apt-get install -y \
+# Install runtime shared libraries
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
+    libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy virtual environment from builder
+# Copy virtual environment
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Set working directory
+# App working directory
 WORKDIR /app
 
-# Copy application code
+# Copy backend code
 COPY src/ /app/src/
 COPY examples/ /app/examples/
 
-# Copy built frontend from frontend-builder
+# Copy frontend build
 COPY --from=frontend-builder /frontend/dist /app/FRRONTEEEND/dist
 
-# Create necessary directories for Cloud Run ephemeral storage
-RUN mkdir -p /tmp/data_science_agent \
+# Cloud Run ephemeral directories
+RUN mkdir -p \
+    /tmp/data_science_agent \
     /tmp/outputs/models \
     /tmp/outputs/plots \
     /tmp/outputs/reports \
     /tmp/outputs/data \
     /tmp/cache_db
 
-# Set environment variables
+# Environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8080
 ENV OUTPUT_DIR=/tmp/outputs
 ENV CACHE_DB_PATH=/tmp/cache_db/cache.db
 ENV ARTIFACT_BACKEND=local
 
-# Cloud Run expects the service to listen on the PORT env variable
 EXPOSE 8080
 
-# Run the FastAPI application with uvicorn
+# Start FastAPI
 CMD ["uvicorn", "src.api.app:app", "--host", "0.0.0.0", "--port", "8080"]
-
