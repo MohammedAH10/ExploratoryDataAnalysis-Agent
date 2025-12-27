@@ -1311,10 +1311,15 @@ You are a DOER. Complete workflows based on user intent."""
         iteration = 0
         tool_call_counter = {}  # Track how many times each tool has been called
         
-        # For Gemini, maintain a persistent chat session
+        # Prepare tools once
+        tools_to_use = self._compress_tools_registry()
+        
+        # For Gemini, maintain a persistent chat session with tools configured
         gemini_chat = None
+        gemini_tools = None
         if self.provider == "gemini":
-            gemini_chat = self.gemini_model.start_chat(history=[])
+            gemini_tools = self._convert_to_gemini_tools(tools_to_use)
+            gemini_chat = self.gemini_model.start_chat(history=[], enable_automatic_function_calling=False)
         
         while iteration < max_iterations:
             iteration += 1
@@ -1325,9 +1330,6 @@ You are a DOER. Complete workflows based on user intent."""
                     # Keep: system prompt, user message, and last 8 tool interactions
                     messages = [messages[0], messages[1]] + messages[-8:]
                     print(f"📊 Pruned conversation history (keeping last 8 messages)")
-                
-                # Use compressed tools registry (all 46 tools but shorter descriptions)
-                tools_to_use = self._compress_tools_registry()
                 
                 # Rate limiting - wait if needed (for Gemini free tier: 10 RPM)
                 if self.min_api_call_interval > 0:
@@ -1356,20 +1358,17 @@ You are a DOER. Complete workflows based on user intent."""
                     final_content = response_message.content
                     
                 elif self.provider == "gemini":
-                    # Convert tools to Gemini format
-                    gemini_tools = self._convert_to_gemini_tools(tools_to_use)
-                    
-                    # First iteration: send system + user message
+                    # First iteration: send system + user message with tools
                     if iteration == 1:
                         combined_message = f"{messages[0]['content']}\n\n{messages[1]['content']}"
+                        # Pass tools only on the first call
                         response = gemini_chat.send_message(
                             combined_message,
                             tools=gemini_tools
                         )
                     else:
-                        # Subsequent iterations: send function responses
-                        # Gemini needs function responses to continue the conversation
-                        # The last message should be a tool response
+                        # Subsequent iterations: send function responses WITHOUT tools parameter
+                        # The chat session already has tools configured from the first call
                         last_tool_msg = messages[-1]
                         if last_tool_msg.get("role") == "tool":
                             # Send function response back to Gemini using proper format
@@ -1382,16 +1381,11 @@ You are a DOER. Complete workflows based on user intent."""
                                 )
                             )
                             
-                            response = gemini_chat.send_message(
-                                function_response_part,
-                                tools=gemini_tools
-                            )
+                            # Don't pass tools again - already configured in chat session
+                            response = gemini_chat.send_message(function_response_part)
                         else:
                             # Shouldn't happen, but fallback
-                            response = gemini_chat.send_message(
-                                "Continue with the next step.",
-                                tools=gemini_tools
-                            )
+                            response = gemini_chat.send_message("Continue with the next step.")
                     
                     self.api_calls_made += 1
                     self.last_api_call_time = time.time()
