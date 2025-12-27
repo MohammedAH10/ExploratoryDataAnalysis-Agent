@@ -1314,12 +1314,22 @@ You are a DOER. Complete workflows based on user intent."""
         # Prepare tools once
         tools_to_use = self._compress_tools_registry()
         
-        # For Gemini, maintain a persistent chat session with tools configured
+        # For Gemini, create a model with tools configured and start chat session
         gemini_chat = None
-        gemini_tools = None
         if self.provider == "gemini":
+            # Convert tools to Gemini format
             gemini_tools = self._convert_to_gemini_tools(tools_to_use)
-            gemini_chat = self.gemini_model.start_chat(history=[], enable_automatic_function_calling=False)
+            
+            # Create a NEW model instance with tools configured
+            # This is the correct way for Gemini API - tools are part of model config
+            gemini_model_with_tools = genai.GenerativeModel(
+                self.model,
+                generation_config={"temperature": 0.1},
+                tools=gemini_tools
+            )
+            
+            # Start chat with the tool-configured model
+            gemini_chat = gemini_model_with_tools.start_chat(history=[], enable_automatic_function_calling=False)
         
         while iteration < max_iterations:
             iteration += 1
@@ -1358,20 +1368,16 @@ You are a DOER. Complete workflows based on user intent."""
                     final_content = response_message.content
                     
                 elif self.provider == "gemini":
-                    # First iteration: send system + user message with tools
+                    # Send messages WITHOUT tools parameter (tools already configured on model)
                     if iteration == 1:
+                        # First iteration: send system + user message
                         combined_message = f"{messages[0]['content']}\n\n{messages[1]['content']}"
-                        # Pass tools only on the first call
-                        response = gemini_chat.send_message(
-                            combined_message,
-                            tools=gemini_tools
-                        )
+                        response = gemini_chat.send_message(combined_message)
                     else:
-                        # Subsequent iterations: send function responses WITHOUT tools parameter
-                        # The chat session already has tools configured from the first call
+                        # Subsequent iterations: send function responses
                         last_tool_msg = messages[-1]
                         if last_tool_msg.get("role") == "tool":
-                            # Send function response back to Gemini using proper format
+                            # Send function response back to Gemini
                             from google.ai.generativelanguage_v1beta.types import content as glm_content
                             
                             function_response_part = glm_content.Part(
@@ -1381,10 +1387,9 @@ You are a DOER. Complete workflows based on user intent."""
                                 )
                             )
                             
-                            # Don't pass tools again - already configured in chat session
                             response = gemini_chat.send_message(function_response_part)
                         else:
-                            # Shouldn't happen, but fallback
+                            # Fallback
                             response = gemini_chat.send_message("Continue with the next step.")
                     
                     self.api_calls_made += 1
