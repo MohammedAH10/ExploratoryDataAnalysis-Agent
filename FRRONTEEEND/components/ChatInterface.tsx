@@ -419,16 +419,20 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   )}
                   {msg.reports && msg.reports.length > 0 && (
                     <div className="mt-4 flex flex-wrap gap-2">
-                      {msg.reports.map((report, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setReportModalUrl(`${window.location.origin}${report.path}`)}
-                          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 text-indigo-200 text-xs font-medium transition-all group"
-                        >
-                          <Sparkles className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                          View {report.name} Report
-                        </button>
-                      ))}
+                      {msg.reports.map((report, idx) => {
+                        // Normalize the report path: remove leading ./ and ensure it starts with /
+                        const normalizedPath = report.path.replace(/^\.\//, '/');
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => setReportModalUrl(`${window.location.origin}${normalizedPath}`)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 text-indigo-200 text-xs font-medium transition-all group"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                            View {report.name} Report
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                   <div className="mt-2 text-[10px] opacity-20 font-mono">

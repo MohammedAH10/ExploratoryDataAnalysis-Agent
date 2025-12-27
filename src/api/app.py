@@ -471,7 +471,20 @@ async def serve_output_files(file_path: str):
     except ValueError:
         raise HTTPException(status_code=403, detail="Access denied")
     
-    return FileResponse(output_path)
+    # Determine media type based on file extension
+    media_type = None
+    if file_path.endswith('.html'):
+        media_type = "text/html"
+    elif file_path.endswith('.csv'):
+        media_type = "text/csv"
+    elif file_path.endswith('.json'):
+        media_type = "application/json"
+    elif file_path.endswith('.png'):
+        media_type = "image/png"
+    elif file_path.endswith('.jpg') or file_path.endswith('.jpeg'):
+        media_type = "image/jpeg"
+    
+    return FileResponse(output_path, media_type=media_type)
 
 
 @app.get("/{full_path:path}")
