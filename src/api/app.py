@@ -116,11 +116,12 @@ class AnalysisRequest(BaseModel):
 
 @app.post("/run")
 async def run_analysis(
-    file: UploadFile = File(..., description="Dataset file (CSV or Parquet)"),
+    file: Optional[UploadFile] = File(None, description="Dataset file (CSV or Parquet) - optional for follow-up requests"),
     task_description: str = Form(..., description="Natural language task description"),
     target_col: Optional[str] = Form(None, description="Target column name for prediction"),
     use_cache: bool = Form(True, description="Enable caching for expensive operations"),
-    max_iterations: int = Form(20, description="Maximum workflow iterations")
+    max_iterations: int = Form(20, description="Maximum workflow iterations"),
+    session_id: Optional[str] = Form(None, description="Session ID for follow-up requests")
 ) -> JSONResponse:
     """
     Run complete data science workflow on uploaded dataset.
@@ -148,7 +149,68 @@ async def run_analysis(
     if agent is None:
         raise HTTPException(status_code=503, detail="Agent not initialized")
     
-    # Validate file format
+    # Handle follow-up requests (no file, using session memory)
+    if file is None:
+        logger.info(f"Follow-up request without file, using session memory")
+        logger.info(f"Task: {task_description}")
+        
+        try:
+            # Agent's session memory should resolve file_path from context
+            result = agent.analyze(
+                file_path="",  # Empty - will be resolved by session memory
+                task_description=task_description,
+                target_col=target_col,
+                use_cache=use_cache,
+                max_iterations=max_iterations
+            )
+            
+            logger.info(f"Follow-up analysis completed: {result.get('status')}")
+            
+            # Make result JSON serializable
+            def make_json_serializable(obj):
+                if isinstance(obj, dict):
+                    return {k: make_json_serializable(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [make_json_serializable(item) for item in obj]
+                elif hasattr(obj, '__class__') and obj.__class__.__name__ in ['Figure', 'Axes', 'Artist']:
+                    return f"<{obj.__class__.__name__} object - see artifacts>"
+                elif isinstance(obj, (str, int, float, bool, type(None))):
+                    return obj
+                else:
+                    try:
+                        return str(obj)
+                    except:
+                        return f"<{type(obj).__name__}>"
+            
+            serializable_result = make_json_serializable(result)
+            
+            return JSONResponse(
+                content={
+                    "success": result.get("status") == "success",
+                    "result": serializable_result,
+                    "metadata": {
+                        "filename": "session_context",
+                        "task": task_description,
+                        "target": target_col,
+                        "provider": agent.provider,
+                        "follow_up": True
+                    }
+                },
+                status_code=200
+            )
+        
+        except Exception as e:
+            logger.error(f"Follow-up analysis failed: {str(e)}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "message": "Follow-up request failed. Make sure you've uploaded a file first."
+                }
+            )
+    
+    # Validate file format for new uploads
     filename = file.filename.lower()
     if not (filename.endswith('.csv') or filename.endswith('.parquet')):
         raise HTTPException(
