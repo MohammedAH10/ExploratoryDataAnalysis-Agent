@@ -48,17 +48,39 @@ def generate_ydata_profiling_report(
         else:
             raise ValueError(f"Unsupported file format: {file_path}")
         
+        # Auto-optimize for large datasets to prevent memory crashes
+        rows, cols = df.shape
+        file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+        
+        # Automatic sampling for large datasets (>10MB or >50k rows)
+        should_sample = file_size_mb > 10 or rows > 50000
+        if should_sample and not minimal:
+            print(f"📊 Large dataset detected: {rows:,} rows, {file_size_mb:.1f}MB")
+            print(f"⚡ Sampling to 50,000 rows for memory efficiency...")
+            df = df.sample(n=min(50000, rows), random_state=42)
+            minimal = True  # Force minimal mode for large files
+        
+        # Force minimal mode for files >5MB even after sampling
+        if file_size_mb > 5:
+            minimal = True
+            print(f"⚡ Using minimal profiling mode (file size: {file_size_mb:.1f}MB)")
+        
         # Create output directory if needed
         os.makedirs(os.path.dirname(output_path) or "./outputs/reports", exist_ok=True)
         
         # Configure profile based on minimal flag
         if minimal:
-            # Minimal mode: faster for large datasets
+            # Minimal mode: faster for large datasets, less memory
             profile = ProfileReport(
                 df,
                 title=title,
                 minimal=True,
-                explorative=False
+                explorative=False,
+                samples=None,  # Disable sample display to save memory
+                correlations=None,  # Skip correlations in minimal mode
+                missing_diagrams=None,  # Skip missing diagrams
+                duplicates=None,  # Skip duplicate analysis
+                interactions=None  # Skip interactions
             )
         else:
             # Full mode: comprehensive analysis
