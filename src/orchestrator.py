@@ -361,7 +361,19 @@ class DataScienceCopilot:
         """Build comprehensive system prompt for the copilot."""
         return """You are an autonomous Data Science Agent. You EXECUTE tasks, not advise.
 
-**CRITICAL: Use the provided function calling tools. Do NOT generate XML-style function calls.**
+**CRITICAL: Tool Calling Format**
+When you need to use a tool, respond with a JSON block like this:
+```json
+{
+  "tool": "tool_name",
+  "arguments": {
+    "param1": "value1",
+    "param2": 123
+  }
+}
+```
+
+**ONE TOOL PER RESPONSE**. After tool execution, I will send you the result and you can call the next tool.
 
 **CRITICAL: Detect the user's intent and use the appropriate workflow.**
 
@@ -1048,6 +1060,72 @@ You are a DOER. Complete workflows based on user intent."""
         
         return compressed
     
+    def _parse_text_tool_calls(self, text_response: str) -> List[Dict[str, Any]]:
+        """
+        Parse tool calls from text-based LLM response (ReAct pattern).
+        Supports multiple formats:
+        - JSON: {"tool": "tool_name", "arguments": {...}}
+        - Function: tool_name(arg1="value", arg2="value")
+        - Markdown: ```json {...} ```
+        """
+        import re
+        tool_calls = []
+        
+        # Pattern 1: JSON blocks (most reliable)
+        json_pattern = r'```(?:json)?\s*(\{[^\`]+\})\s*```'
+        json_matches = re.findall(json_pattern, text_response, re.DOTALL)
+        
+        for match in json_matches:
+            try:
+                tool_data = json.loads(match)
+                if "tool" in tool_data or "function" in tool_data:
+                    tool_name = tool_data.get("tool") or tool_data.get("function")
+                    arguments = tool_data.get("arguments") or tool_data.get("args") or {}
+                    tool_calls.append({
+                        "id": f"call_{len(tool_calls)}",
+                        "function": {
+                            "name": tool_name,
+                            "arguments": json.dumps(arguments)
+                        }
+                    })
+            except json.JSONDecodeError:
+                continue
+        
+        # Pattern 2: Function call format - tool_name(arg1="value", arg2=123)
+        if not tool_calls:
+            func_pattern = r'(\w+)\s*\((.*?)\)'
+            for match in re.finditer(func_pattern, text_response):
+                tool_name = match.group(1)
+                args_str = match.group(2)
+                
+                # Check if this looks like a known tool
+                if any(tool_name in tool["function"]["name"] for tool in self._compress_tools_registry()):
+                    # Parse arguments
+                    arguments = {}
+                    arg_pattern = r'(\w+)\s*=\s*(["\']?)([^,\)]+)\2'
+                    for arg_match in re.finditer(arg_pattern, args_str):
+                        key = arg_match.group(1)
+                        value = arg_match.group(3)
+                        # Try to parse as number/bool
+                        if value.lower() == "true":
+                            arguments[key] = True
+                        elif value.lower() == "false":
+                            arguments[key] = False
+                        elif value.isdigit():
+                            arguments[key] = int(value)
+                        else:
+                            arguments[key] = value
+                    
+                    tool_calls.append({
+                        "id": f"call_{len(tool_calls)}",
+                        "function": {
+                            "name": tool_name,
+                            "arguments": json.dumps(arguments)
+                        }
+                    })
+        
+        return tool_calls
+    
     def _convert_to_gemini_tools(self, groq_tools: List[Dict]) -> List[Dict]:
         """
         Convert Groq/OpenAI format tools to Gemini format.
@@ -1375,20 +1453,12 @@ You are a DOER. Complete workflows based on user intent."""
                             combined_message = f"{messages[0]['content']}\n\n{messages[1]['content']}"
                             response = gemini_chat.send_message(combined_message)
                         else:
-                            # Subsequent iterations: send function responses
+                            # Subsequent iterations: send tool results as plain text
                             last_tool_msg = messages[-1]
                             if last_tool_msg.get("role") == "tool":
-                                # Send function response back to Gemini
-                                from google.ai.generativelanguage_v1beta.types import content as glm_content
-                                
-                                function_response_part = glm_content.Part(
-                                    function_response=glm_content.FunctionResponse(
-                                        name=last_tool_msg["name"],
-                                        response={"result": last_tool_msg["content"]}
-                                    )
-                                )
-                                
-                                response = gemini_chat.send_message(function_response_part)
+                                # Format tool result as text for Gemini
+                                result_message = f"Tool '{last_tool_msg['name']}' executed successfully.\n\nResult:\n{last_tool_msg['content']}\n\nWhat's the next step?"
+                                response = gemini_chat.send_message(result_message)
                             else:
                                 # Fallback
                                 response = gemini_chat.send_message("Continue with the next step.")
@@ -1406,16 +1476,29 @@ You are a DOER. Complete workflows based on user intent."""
                     self.api_calls_made += 1
                     self.last_api_call_time = time.time()
                     
-                    # Extract function calls from Gemini response
+                    # Extract tool calls from Gemini TEXT response (text-based tool calling)
                     tool_calls = []
                     final_content = None
                     
                     if response.candidates and response.candidates[0].content.parts:
                         for part in response.candidates[0].content.parts:
-                            if hasattr(part, 'function_call') and part.function_call:
-                                tool_calls.append(part.function_call)
-                            elif hasattr(part, 'text') and part.text:
-                                final_content = part.text
+                            if hasattr(part, 'text') and part.text:
+                                text_response = part.text
+                                final_content = text_response
+                                
+                                # Parse tool calls from text using JSON blocks or function syntax
+                                parsed_calls = self._parse_text_tool_calls(text_response)
+                                if parsed_calls:
+                                    # Convert to tool_call objects matching Groq format
+                                    for call in parsed_calls:
+                                        tool_call_obj = type('ToolCall', (), {
+                                            'id': call['id'],
+                                            'function': type('Function', (), {
+                                                'name': call['function']['name'],
+                                                'arguments': call['function']['arguments']
+                                            })()
+                                        })()
+                                        tool_calls.append(tool_call_obj)
                 
                 # Check if done (no tool calls)
                 if not tool_calls:
