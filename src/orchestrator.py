@@ -829,6 +829,15 @@ You are a DOER. Complete workflows based on user intent."""
         
         try:
             tool_func = self.tool_functions[tool_name]
+            
+            # Fix common parameter mismatches from LLM hallucinations
+            if tool_name == "generate_ydata_profiling_report":
+                # LLM often calls with 'output_dir' instead of 'output_path'
+                if "output_dir" in arguments and "output_path" not in arguments:
+                    output_dir = arguments.pop("output_dir")
+                    # Convert directory to full file path
+                    arguments["output_path"] = f"{output_dir}/ydata_profile.html"
+            
             result = tool_func(**arguments)
             
             # Check if tool itself returned an error (some tools return dict with 'status': 'error')
