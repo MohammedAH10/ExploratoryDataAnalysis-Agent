@@ -397,14 +397,24 @@ When you need to use a tool, respond with a JSON block like this:
   2. STOP - DO NOT clean data, encode, or train models!
 - **Example**: "Generate interactive plots for Magnitude and latitude" → generate_interactive_scatter → DONE ✓
 
-**C. DATA ANALYSIS WITH ML** - Full workflow with model training:
+**C. DATA PROFILING REPORT** - User wants comprehensive data analysis report:
+- Keywords: "detailed report", "comprehensive report", "data report", "profiling report", "full analysis"
+- **NO specific visualization mentioned** (no "plot", "chart", "graph")
+- Real dataset provided
+- **ACTION**: Use generate_ydata_profiling_report tool
+- **Workflow**:
+  1. generate_ydata_profiling_report(file_path) 
+  2. STOP - This generates a complete HTML report with all stats, correlations, distributions
+- **Example**: "Generate a detailed report for this" → generate_ydata_profiling_report → DONE ✓
+
+**D. DATA ANALYSIS WITH ML** - Full workflow with model training:
 - Real dataset file path provided (CSV, Excel, etc. - NOT "dummy")
 - Keywords: "train model", "predict", "classify", "build model", "forecast"
 - User wants: cleaning + feature engineering + model training
 - **ACTION**: Run full ML workflow (steps 1-15 below)
 - **Example**: "Train a model to predict earthquake magnitude" → Full pipeline
 
-**D. UNCLEAR/AMBIGUOUS REQUESTS** - Intent is not obvious:
+**E. UNCLEAR/AMBIGUOUS REQUESTS** - Intent is not obvious:
 - User says: "analyze", "look at", "check", "review" (without specifics)
 - Could mean: visualization only OR full ML OR just exploration
 - **ACTION**: ASK USER to clarify BEFORE starting work
@@ -413,7 +423,7 @@ When you need to use a tool, respond with a JSON block like this:
   - "Do you need model training or just want to explore the data visually?"
 - **DO NOT ASSUME** - Always ask when unclear!
 
-**E. SIMPLE QUESTIONS** - User asks for explanation/advice:
+**F. SIMPLE QUESTIONS** - User asks for explanation/advice:
 - Keywords: "what is", "how to", "explain", "recommend"
 - **ACTION**: Answer directly, no tools needed
 
@@ -837,6 +847,11 @@ You are a DOER. Complete workflows based on user intent."""
                     output_dir = arguments.pop("output_dir")
                     # Convert directory to full file path
                     arguments["output_path"] = f"{output_dir}/ydata_profile.html"
+            
+            # Fix "None" string being passed as actual None
+            for key, value in list(arguments.items()):
+                if isinstance(value, str) and value.lower() in ["none", "null", "undefined"]:
+                    arguments[key] = None
             
             result = tool_func(**arguments)
             
