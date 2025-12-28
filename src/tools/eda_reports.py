@@ -52,16 +52,22 @@ def generate_ydata_profiling_report(
         rows, cols = df.shape
         file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
         
-        # Automatic sampling for large datasets (>10MB or >50k rows)
-        should_sample = file_size_mb > 10 or rows > 50000
+        # Check environment: HuggingFace has 16GB, Render has 512MB
+        # Allow larger datasets on high-memory environments
+        max_rows_threshold = int(os.getenv("YDATA_MAX_ROWS", "100000"))  # Default: 100k (HF), or set to 50000 for low-mem
+        max_size_threshold = float(os.getenv("YDATA_MAX_SIZE_MB", "50"))  # Default: 50MB
+        
+        # Automatic sampling only when dataset exceeds thresholds
+        should_sample = file_size_mb > max_size_threshold or rows > max_rows_threshold
         if should_sample and not minimal:
+            sample_size = int(os.getenv("YDATA_SAMPLE_SIZE", "100000"))
             print(f"📊 Large dataset detected: {rows:,} rows, {file_size_mb:.1f}MB")
-            print(f"⚡ Sampling to 50,000 rows for memory efficiency...")
-            df = df.sample(n=min(50000, rows), random_state=42)
+            print(f"⚡ Sampling to {sample_size:,} rows for memory efficiency...")
+            df = df.sample(n=min(sample_size, rows), random_state=42)
             minimal = True  # Force minimal mode for large files
         
-        # Force minimal mode for files >5MB even after sampling
-        if file_size_mb > 5:
+        # Force minimal mode for very large files even after sampling
+        if file_size_mb > max_size_threshold * 2:
             minimal = True
             print(f"⚡ Using minimal profiling mode (file size: {file_size_mb:.1f}MB)")
         

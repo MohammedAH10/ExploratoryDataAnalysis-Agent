@@ -78,6 +78,12 @@ ENV OUTPUT_DIR=/tmp/outputs
 ENV CACHE_DB_PATH=/tmp/cache_db/cache.db
 ENV ARTIFACT_BACKEND=local
 
+# YData Profiling optimization for 512MB RAM (Render Free Tier)
+# Lower thresholds = aggressive sampling to prevent crashes
+ENV YDATA_MAX_ROWS=50000
+ENV YDATA_MAX_SIZE_MB=10
+ENV YDATA_SAMPLE_SIZE=50000
+
 EXPOSE 8080
 
 # Start FastAPI

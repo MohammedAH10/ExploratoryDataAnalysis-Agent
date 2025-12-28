@@ -86,6 +86,12 @@ ENV OUTPUT_DIR=/home/user/app/outputs
 ENV CACHE_DB_PATH=/home/user/app/cache_db/cache.db
 ENV ARTIFACT_BACKEND=local
 
+# YData Profiling optimization for 16GB RAM (HuggingFace Spaces)
+# Higher thresholds = better quality reports without sampling
+ENV YDATA_MAX_ROWS=200000
+ENV YDATA_MAX_SIZE_MB=100
+ENV YDATA_SAMPLE_SIZE=150000
+
 # HuggingFace Spaces uses port 7860 by default
 EXPOSE 7860
 
