@@ -1690,20 +1690,55 @@ You are a DOER. Complete workflows based on user intent."""
                         # Check if it's a rate limit error (429)
                         error_str = str(groq_error)
                         if "rate_limit" in error_str.lower() or "429" in error_str:
-                            # Detailed rate limit error
-                            if "tokens per day" in error_str or "TPD" in error_str:
-                                print(f"❌ GROQ DAILY TOKEN LIMIT EXHAUSTED (100K tokens/day)")
-                                print(f"   Your daily quota resets in a few hours")
-                                print(f"   Error: {error_str[:300]}")
-                            elif "tokens per minute" in error_str or "TPM" in error_str:
-                                print(f"❌ GROQ TOKENS PER MINUTE LIMIT (12K tokens/min)")
-                                print(f"   Wait 60 seconds and try again")
-                                print(f"   Error: {error_str[:300]}")
-                            else:
-                                print(f"❌ GROQ RATE LIMIT")
-                                print(f"   Error: {error_str[:300]}")
+                            # Parse retry delay from error message if available
+                            retry_delay = 60  # Default to 60s for TPM limit
                             
-                            raise ValueError(f"Groq rate limit exceeded. Please wait and try again.\n{error_str[:500]}")
+                            # Try to extract retry delay from error
+                            import re
+                            delay_match = re.search(r'retry.*?(\d+).*?second', error_str, re.IGNORECASE)
+                            if delay_match:
+                                retry_delay = int(delay_match.group(1))
+                            elif "tokens per minute" in error_str or "TPM" in error_str:
+                                retry_delay = 60
+                            elif "tokens per day" in error_str or "TPD" in error_str:
+                                # Daily limit - give up immediately
+                                print(f"❌ GROQ DAILY TOKEN LIMIT EXHAUSTED (100K tokens/day)")
+                                print(f"   Your daily quota resets at UTC midnight")
+                                print(f"   Error: {error_str[:400]}")
+                                raise ValueError(f"Groq daily quota exhausted. Please wait for reset.\n{error_str[:500]}")
+                            
+                            # TPM limit - wait and retry
+                            print(f"⚠️  GROQ TPM RATE LIMIT (rolling 60s window)")
+                            print(f"   Groq uses account-wide rolling window - previous requests still count")
+                            print(f"   Waiting {retry_delay}s and retrying...")
+                            print(f"   Error: {error_str[:300]}")
+                            
+                            time.sleep(retry_delay)
+                            
+                            # Retry the request
+                            print(f"🔄 Retrying after {retry_delay}s delay...")
+                            response = self.groq_client.chat.completions.create(
+                                model=self.model,
+                                messages=messages,
+                                tools=tools_to_use,
+                                tool_choice="auto",
+                                parallel_tool_calls=False,
+                                temperature=0.1,
+                                max_tokens=4096
+                            )
+                            
+                            self.api_calls_made += 1
+                            self.last_api_call_time = time.time()
+                            
+                            # Track tokens used
+                            if hasattr(response, 'usage') and response.usage:
+                                tokens_used = response.usage.total_tokens
+                                self.tokens_this_minute += tokens_used
+                                print(f"📊 Tokens: {tokens_used} this call | {self.tokens_this_minute}/{self.tpm_limit} this minute")
+                            
+                            response_message = response.choices[0].message
+                            tool_calls = response_message.tool_calls
+                            final_content = response_message.content
                         else:
                             # Not a rate limit error, re-raise
                             raise
