@@ -244,13 +244,24 @@ class DataScienceCopilot:
         self.tools_registry = TOOLS
         self.tool_functions = self._build_tool_functions_map()
         
-        # Token tracking
+        # Token tracking and rate limiting
         self.total_tokens_used = 0
+        self.tokens_this_minute = 0
+        self.minute_start_time = time.time()
         self.api_calls_made = 0
+        
+        # Provider-specific limits
+        if self.provider == "groq":
+            self.tpm_limit = 12000  # Tokens per minute
+            self.rpm_limit = 30     # Requests per minute
+            self.min_api_call_interval = 0.5  # Wait between calls
+        elif self.provider == "gemini":
+            self.tpm_limit = 32000  # More generous
+            self.rpm_limit = 15
+            self.min_api_call_interval = 1.0  # Gemini free tier: safer spacing
         
         # Rate limiting for Gemini (10 RPM free tier)
         self.last_api_call_time = 0
-        self.min_api_call_interval = 1.0 if self.provider == "gemini" else 0  # 1s = safe for Gemini API
         
         # Ensure output directories exist
         Path("./outputs").mkdir(exist_ok=True)
@@ -1575,13 +1586,46 @@ You are a DOER. Complete workflows based on user intent."""
             iteration += 1
             
             try:
-                # Prune messages to avoid token bloat (keep system + user + last 8 messages)
+                # 🚀 AGGRESSIVE CONVERSATION PRUNING (LangChain pattern)
+                # Keep only: system + user + last 4 exchanges (8 messages)
+                # This prevents token bloat while maintaining context
                 if len(messages) > 10:
-                    # Keep: system prompt, user message, and last 8 tool interactions
+                    # Keep: system prompt [0], user query [1], last 4 exchanges
                     messages = [messages[0], messages[1]] + messages[-8:]
-                    print(f"📊 Pruned conversation history (keeping last 8 messages)")
+                    print(f"✂️  Pruned conversation (keeping last 4 exchanges, ~4K tokens saved)")
                 
-                # Rate limiting - wait if needed (for Gemini free tier: 10 RPM)
+                # 🔍 Token estimation and warning
+                estimated_tokens = sum(len(str(m.get('content', ''))) // 4 for m in messages)
+                if estimated_tokens > 8000:
+                    # Emergency pruning - keep only last 2 exchanges
+                    messages = [messages[0], messages[1]] + messages[-4:]
+                    print(f"⚠️  Emergency pruning (conversation > 8K tokens)")
+                
+                # 💰 Token budget management (Groq TPM limit)
+                if self.provider == "groq":
+                    # Reset minute counter if needed
+                    elapsed = time.time() - self.minute_start_time
+                    if elapsed > 60:
+                        print(f"🔄 Token budget reset (was {self.tokens_this_minute}/{self.tpm_limit})")
+                        self.tokens_this_minute = 0
+                        self.minute_start_time = time.time()
+                    
+                    # Check if we're close to TPM limit (use 70% threshold to be safe)
+                    if self.tokens_this_minute + estimated_tokens > self.tpm_limit * 0.7:
+                        wait_time = 60 - elapsed
+                        if wait_time > 0:
+                            print(f"⏸️  Token budget: {self.tokens_this_minute}/{self.tpm_limit} used ({(self.tokens_this_minute/self.tpm_limit)*100:.0f}%)")
+                            print(f"   Next request would use ~{estimated_tokens} tokens → exceeds safe limit")
+                            print(f"   Waiting {wait_time:.0f}s for budget reset...")
+                            time.sleep(wait_time)
+                            self.tokens_this_minute = 0
+                            self.minute_start_time = time.time()
+                            print(f"✅ Token budget reset complete")
+                    else:
+                        print(f"💰 Token budget: {self.tokens_this_minute}/{self.tpm_limit} ({(self.tokens_this_minute/self.tpm_limit)*100:.0f}%)")
+
+                
+                # Rate limiting - wait if needed
                 if self.min_api_call_interval > 0:
                     time_since_last_call = time.time() - self.last_api_call_time
                     if time_since_last_call < self.min_api_call_interval:
@@ -1604,6 +1648,13 @@ You are a DOER. Complete workflows based on user intent."""
                         
                         self.api_calls_made += 1
                         self.last_api_call_time = time.time()
+                        
+                        # Track tokens used (for TPM budget management)
+                        if hasattr(response, 'usage') and response.usage:
+                            tokens_used = response.usage.total_tokens
+                            self.tokens_this_minute += tokens_used
+                            print(f"📊 Tokens: {tokens_used} this call | {self.tokens_this_minute}/{self.tpm_limit} this minute")
+                        
                         response_message = response.choices[0].message
                         tool_calls = response_message.tool_calls
                         final_content = response_message.content
