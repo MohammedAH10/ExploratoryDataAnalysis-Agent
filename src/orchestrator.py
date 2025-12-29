@@ -1688,141 +1688,25 @@ You are a DOER. Complete workflows based on user intent."""
                         
                     except Exception as groq_error:
                         # Check if it's a rate limit error (429)
-                        if "rate_limit" in str(groq_error).lower() or "429" in str(groq_error):
-                            print(f"⚠️  Groq rate limit exceeded! Automatically switching to Gemini...")
-                            print(f"   Groq error: {str(groq_error)[:200]}")
+                        error_str = str(groq_error)
+                        if "rate_limit" in error_str.lower() or "429" in error_str:
+                            # Detailed rate limit error
+                            if "tokens per day" in error_str or "TPD" in error_str:
+                                print(f"❌ GROQ DAILY TOKEN LIMIT EXHAUSTED (100K tokens/day)")
+                                print(f"   Your daily quota resets in a few hours")
+                                print(f"   Error: {error_str[:300]}")
+                            elif "tokens per minute" in error_str or "TPM" in error_str:
+                                print(f"❌ GROQ TOKENS PER MINUTE LIMIT (12K tokens/min)")
+                                print(f"   Wait 60 seconds and try again")
+                                print(f"   Error: {error_str[:300]}")
+                            else:
+                                print(f"❌ GROQ RATE LIMIT")
+                                print(f"   Error: {error_str[:300]}")
                             
-                            # Switch to Gemini fallback
-                            if not hasattr(self, 'gemini_model') or self.gemini_model is None:
-                                # Initialize Gemini if not already done
-                                import google.generativeai as genai
-                                api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-                                if not api_key:
-                                    raise ValueError("Groq exhausted and no Gemini API key available for fallback")
-                                
-                                genai.configure(api_key=api_key)
-                                gemini_model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-                                
-                                # Safety settings
-                                safety_settings = [
-                                    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-                                    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-                                    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-                                    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
-                                ]
-                                
-                                self.gemini_model = genai.GenerativeModel(
-                                    model_name=gemini_model_name,
-                                    safety_settings=safety_settings
-                                )
-                                print(f"   ✅ Gemini fallback initialized: {gemini_model_name}")
-                            
-                            # Switch provider for this session
-                            self.provider = "gemini"
-                            self.use_compact_prompts = False  # Gemini has large context
-                            gemini_chat = self.gemini_model.start_chat(history=[])
-                            print(f"   🔄 Now using Gemini for remaining workflow")
-                            
-                            # Make the Gemini API call immediately
-                            try:
-                                if iteration == 1:
-                                    # First iteration: send system + user message
-                                    combined_message = f"{messages[0]['content']}\n\n{messages[1]['content']}"
-                                    response = gemini_chat.send_message(combined_message)
-                                else:
-                                    # Subsequent iterations: send tool results as plain text
-                                    last_tool_msg = messages[-1]
-                                    if last_tool_msg.get("role") == "tool":
-                                        # Format tool result as text for Gemini
-                                        result_message = f"Tool '{last_tool_msg['name']}' executed successfully.\n\nResult:\n{last_tool_msg['content']}\n\nWhat's the next step?"
-                                        response = gemini_chat.send_message(result_message)
-                                    else:
-                                        # Fallback
-                                        response = gemini_chat.send_message("Continue with the next step.")
-                                
-                                self.api_calls_made += 1
-                                self.last_api_call_time = time.time()
-                                
-                                # Extract tool calls from Gemini TEXT response
-                                tool_calls = []
-                                if response.candidates and response.candidates[0].content.parts:
-                                    for part in response.candidates[0].content.parts:
-                                        if hasattr(part, 'text') and part.text:
-                                            text_response = part.text
-                                            final_content = text_response
-                                            
-                                            # Parse tool calls from text
-                                            parsed_calls = self._parse_text_tool_calls(text_response)
-                                            if parsed_calls:
-                                                for call in parsed_calls:
-                                                    tool_call_obj = type('ToolCall', (), {
-                                                        'id': call['id'],
-                                                        'name': call['function']['name'],
-                                                        'args': json.loads(call['function']['arguments']) if isinstance(call['function']['arguments'], str) else call['function']['arguments']
-                                                    })()
-                                                    tool_calls.append(tool_call_obj)
-                            except Exception as gemini_error:
-                                # If Gemini also fails, log and continue with empty response
-                                print(f"⚠️  Gemini fallback also failed: {str(gemini_error)[:200]}")
-                                final_content = "Analysis interrupted due to API errors."
-                                tool_calls = []
+                            raise ValueError(f"Groq rate limit exceeded. Please wait and try again.\n{error_str[:500]}")
                         else:
                             # Not a rate limit error, re-raise
                             raise
-                    
-                elif self.provider == "gemini":
-                    # Send messages WITHOUT tools parameter (tools already configured on model)
-                    try:
-                        if iteration == 1:
-                            # First iteration: send system + user message
-                            combined_message = f"{messages[0]['content']}\n\n{messages[1]['content']}"
-                            response = gemini_chat.send_message(combined_message)
-                        else:
-                            # Subsequent iterations: send tool results as plain text
-                            last_tool_msg = messages[-1]
-                            if last_tool_msg.get("role") == "tool":
-                                # Format tool result as text for Gemini
-                                result_message = f"Tool '{last_tool_msg['name']}' executed successfully.\n\nResult:\n{last_tool_msg['content']}\n\nWhat's the next step?"
-                                response = gemini_chat.send_message(result_message)
-                            else:
-                                # Fallback
-                                response = gemini_chat.send_message("Continue with the next step.")
-                    except Exception as gemini_error:
-                        # Handle StopCandidateException (finish_reason: 12 = blocked/filtered)
-                        error_str = str(gemini_error)
-                        if "finish_reason" in error_str or "StopCandidateException" in str(type(gemini_error)):
-                            print(f"⚠️ Gemini response blocked (safety filter/content policy). Retrying with simplified prompt...")
-                            # Retry with a much shorter message
-                            simplified_msg = "Please provide the next step in data analysis using available tools."
-                            response = gemini_chat.send_message(simplified_msg)
-                        else:
-                            raise
-                    
-                    self.api_calls_made += 1
-                    self.last_api_call_time = time.time()
-                    
-                    # Extract tool calls from Gemini TEXT response (text-based tool calling)
-                    tool_calls = []
-                    final_content = None
-                    
-                    if response.candidates and response.candidates[0].content.parts:
-                        for part in response.candidates[0].content.parts:
-                            if hasattr(part, 'text') and part.text:
-                                text_response = part.text
-                                final_content = text_response
-                                
-                                # Parse tool calls from text using JSON blocks or function syntax
-                                parsed_calls = self._parse_text_tool_calls(text_response)
-                                if parsed_calls:
-                                    # Convert to tool_call objects matching Gemini expected format
-                                    for call in parsed_calls:
-                                        # Create object with attributes matching line 1543: tool_call.name and tool_call.args
-                                        tool_call_obj = type('ToolCall', (), {
-                                            'id': call['id'],
-                                            'name': call['function']['name'],
-                                            'args': json.loads(call['function']['arguments']) if isinstance(call['function']['arguments'], str) else call['function']['arguments']
-                                        })()
-                                        tool_calls.append(tool_call_obj)
                 
                 # Check if done (no tool calls)
                 if not tool_calls:
