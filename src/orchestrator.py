@@ -1094,6 +1094,121 @@ You are a DOER. Complete workflows based on user intent."""
         
         return compressed
     
+    def _compress_tool_result(self, tool_name: str, result: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Compress tool results for small context models (production-grade approach).
+    
+    Keep only:
+    - Status (success/failure)
+    - Key metrics (5-10 most important numbers)
+    - File paths created  
+    - Next action hints
+    
+    Full results stored in workflow_history and session memory.
+    LLM doesn't need verbose output - only decision-making info.
+    
+    Args:
+        tool_name: Name of the tool executed
+        result: Full tool result dict
+        
+    Returns:
+        Compressed result dict (typically 100-500 tokens vs 5K-10K)
+    """
+    if not result.get("success", True):
+        # Keep full error info (critical for debugging)
+        return result
+    
+    compressed = {
+        "success": True,
+        "tool": tool_name
+    }
+    
+    # Tool-specific compression rules
+    if tool_name == "profile_dataset":
+        # Original: ~5K tokens with full stats
+        # Compressed: ~200 tokens with key metrics
+        r = result.get("result", {})
+        compressed["summary"] = {
+            "rows": r.get("num_rows"),
+            "cols": r.get("num_columns"),
+            "missing_pct": r.get("missing_percentage"),
+            "numeric_cols": len(r.get("numeric_columns", [])),
+            "categorical_cols": len(r.get("categorical_columns", [])),
+            "file_size_mb": round(r.get("memory_usage_mb", 0), 1),
+            "key_columns": list(r.get("columns", {}).keys())[:5]  # First 5 columns only
+        }
+        compressed["next_steps"] = ["clean_missing_values", "detect_data_quality_issues"]
+        
+    elif tool_name == "detect_data_quality_issues":
+        r = result.get("result", {})
+        compressed["summary"] = {
+            "total_issues": r.get("total_issues", 0),
+            "critical_issues": r.get("critical_issues", 0),
+            "missing_data": r.get("has_missing"),
+            "outliers": r.get("has_outliers"),
+            "duplicates": r.get("has_duplicates")
+        }
+        compressed["next_steps"] = ["clean_missing_values", "handle_outliers"]
+        
+    elif tool_name in ["clean_missing_values", "handle_outliers", "encode_categorical"]:
+        r = result.get("result", {})
+        compressed["summary"] = {
+            "output_file": r.get("output_file", r.get("output_path")),
+            "rows_processed": r.get("rows_after", r.get("num_rows")),
+            "changes_made": bool(r.get("changes", {}) or r.get("imputed_columns"))
+        }
+        compressed["next_steps"] = ["Use this file for next step"]
+        
+    elif tool_name == "train_baseline_models":
+        r = result.get("result", {})
+        models = r.get("models", [])
+        if models:
+            best = max(models, key=lambda m: m.get("test_score", 0))
+            compressed["summary"] = {
+                "best_model": best.get("model"),
+                "test_score": round(best.get("test_score", 0), 4),
+                "train_score": round(best.get("train_score", 0), 4),
+                "task_type": r.get("task_type"),
+                "models_trained": len(models)
+            }
+        compressed["next_steps"] = ["hyperparameter_tuning", "generate_combined_eda_report"]
+        
+    elif tool_name in ["generate_plotly_dashboard", "generate_ydata_profiling_report", "generate_combined_eda_report"]:
+        r = result.get("result", {})
+        compressed["summary"] = {
+            "report_path": r.get("report_path", r.get("output_path")),
+            "report_type": tool_name,
+            "success": True
+        }
+        compressed["next_steps"] = ["Report ready for viewing"]
+        
+    elif tool_name == "hyperparameter_tuning":
+        r = result.get("result", {})
+        compressed["summary"] = {
+            "best_params": r.get("best_params", {}),
+            "best_score": round(r.get("best_score", 0), 4),
+            "model_type": r.get("model_type"),
+            "trials_completed": r.get("n_trials")
+        }
+        compressed["next_steps"] = ["perform_cross_validation", "generate_model_performance_plots"]
+        
+    else:
+        # Generic compression: Keep only key fields
+        r = result.get("result", {})
+        if isinstance(r, dict):
+            # Extract key fields (common patterns)
+            key_fields = {}
+            for key in ["output_path", "output_file", "status", "message", "success"]:
+                if key in r:
+                    key_fields[key] = r[key]
+            compressed["summary"] = key_fields or {"result": "completed"}
+        else:
+            compressed["summary"] = {"result": str(r)[:200] if r else "completed"}
+        compressed["next_steps"] = ["Continue workflow"]
+    
+    return compressed
+
+
     def _parse_text_tool_calls(self, text_response: str) -> List[Dict[str, Any]]:
         """
         Parse tool calls from text-based LLM response (ReAct pattern).
@@ -1428,6 +1543,13 @@ You are a DOER. Complete workflows based on user intent."""
 **Dataset**: {file_path}
 **Task**: {task_description}
 **Target Column**: {target_col if target_col else 'Not specified - please infer from data'}{workflow_guidance}"""
+
+        #🧠 Store file path in session memory for follow-up requests
+        if self.session and file_path:
+            self.session.update(last_dataset=file_path)
+            if target_col:
+                self.session.update(last_target_col=target_col)
+            print(f"💾 Saved to session: dataset={file_path}, target={target_col}")
         
         messages = [
             {"role": "system", "content": system_prompt},
@@ -1469,21 +1591,67 @@ You are a DOER. Complete workflows based on user intent."""
                 
                 # Call LLM with function calling (provider-specific)
                 if self.provider == "groq":
-                    response = self.groq_client.chat.completions.create(
-                        model=self.model,
-                        messages=messages,
-                        tools=tools_to_use,
-                        tool_choice="auto",
-                        parallel_tool_calls=False,  # Disable parallel calls to prevent XML format errors
-                        temperature=0.1,  # Low temperature for consistent outputs
-                        max_tokens=4096
-                    )
-                    
-                    self.api_calls_made += 1
-                    self.last_api_call_time = time.time()
-                    response_message = response.choices[0].message
-                    tool_calls = response_message.tool_calls
-                    final_content = response_message.content
+                    try:
+                        response = self.groq_client.chat.completions.create(
+                            model=self.model,
+                            messages=messages,
+                            tools=tools_to_use,
+                            tool_choice="auto",
+                            parallel_tool_calls=False,  # Disable parallel calls to prevent XML format errors
+                            temperature=0.1,  # Low temperature for consistent outputs
+                            max_tokens=4096
+                        )
+                        
+                        self.api_calls_made += 1
+                        self.last_api_call_time = time.time()
+                        response_message = response.choices[0].message
+                        tool_calls = response_message.tool_calls
+                        final_content = response_message.content
+                        
+                    except Exception as groq_error:
+                        # Check if it's a rate limit error (429)
+                        if "rate_limit" in str(groq_error).lower() or "429" in str(groq_error):
+                            print(f"⚠️  Groq rate limit exceeded! Automatically switching to Gemini...")
+                            print(f"   Groq error: {str(groq_error)[:200]}")
+                            
+                            # Switch to Gemini fallback
+                            if not hasattr(self, 'gemini_model') or self.gemini_model is None:
+                                # Initialize Gemini if not already done
+                                import google.generativeai as genai
+                                api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+                                if not api_key:
+                                    raise ValueError("Groq exhausted and no Gemini API key available for fallback")
+                                
+                                genai.configure(api_key=api_key)
+                                gemini_model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+                                
+                                # Safety settings
+                                safety_settings = [
+                                    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                                    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                                    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                                    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+                                ]
+                                
+                                self.gemini_model = genai.GenerativeModel(
+                                    model_name=gemini_model_name,
+                                    safety_settings=safety_settings
+                                )
+                                print(f"   ✅ Gemini fallback initialized: {gemini_model_name}")
+                            
+                            # Switch provider for this session
+                            self.provider = "gemini"
+                            self.use_compact_prompts = False  # Gemini has large context
+                            gemini_chat = self.gemini_model.start_chat(history=[])
+                            print(f"   🔄 Now using Gemini for remaining workflow")
+                            
+                            # Retry with Gemini (continue to Gemini block below)
+                            # Set tool_calls to None to trigger Gemini path
+                            response_message = None
+                            tool_calls = None
+                        else:
+                            # Not a rate limit error, re-raise
+                            raise
                     
                 elif self.provider == "gemini":
                     # Send messages WITHOUT tools parameter (tools already configured on model)
@@ -2098,10 +2266,12 @@ You are a DOER. Complete workflows based on user intent."""
                     # ⚡ CRITICAL FIX: Add tool result back to messages so LLM sees it in next iteration!
                     if self.provider == "groq":
                         # For Groq, add tool message with the result
-                        # Make error messages MORE PROMINENT if tool failed
-                        # Clean tool_result to make it JSON-serializable
+                        # **COMPRESS RESULT** for small context models (Groq 12K token limit)
                         clean_tool_result = self._make_json_serializable(tool_result)
-                        tool_response_content = json.dumps(clean_tool_result)
+                        
+                        # Smart compression: Keep only what LLM needs for next decision
+                        compressed_result = self._compress_tool_result(tool_name, clean_tool_result)
+                        tool_response_content = json.dumps(compressed_result)
                         
                         # If tool failed, prepend ERROR indicator to make it obvious
                         if not tool_result.get("success", True):
@@ -2251,3 +2421,4 @@ You are a DOER. Complete workflows based on user intent."""
             return self.session.get_context_summary()
         else:
             return "No active session"
+
