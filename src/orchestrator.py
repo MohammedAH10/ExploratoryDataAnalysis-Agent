@@ -19,6 +19,8 @@ from .cache.cache_manager import CacheManager
 from .tools.tools_registry import TOOLS, get_all_tool_names, get_tools_by_category
 from .session_memory import SessionMemory
 from .session_store import SessionStore
+from .workflow_state import WorkflowState
+from .utils.schema_extraction import extract_schema_local, infer_task_type
 from .tools import (
     # Basic Tools (13) - UPDATED: Added get_smart_summary + 3 wrangling tools
     profile_dataset,
@@ -262,6 +264,9 @@ class DataScienceCopilot:
         
         # Rate limiting for Gemini (10 RPM free tier)
         self.last_api_call_time = 0
+        
+        # Workflow state for context management (reduces token usage)
+        self.workflow_state = WorkflowState()
         
         # Ensure output directories exist
         Path("./outputs").mkdir(exist_ok=True)
@@ -1422,6 +1427,67 @@ You are a DOER. Complete workflows based on user intent."""
         
         return gemini_tools
     
+    def _update_workflow_state(self, tool_name: str, tool_result: Dict[str, Any]):
+        """
+        Update workflow state based on tool execution.
+        This reduces the need to keep full tool results in LLM context.
+        """
+        if not tool_result.get("success", True):
+            return  # Don't update state on failures
+        
+        result_data = tool_result.get("result", {})
+        
+        # Profile dataset
+        if tool_name == "profile_dataset":
+            self.workflow_state.update_profiling({
+                "num_rows": result_data.get("num_rows"),
+                "num_columns": result_data.get("num_columns"),
+                "missing_percentage": result_data.get("missing_percentage"),
+                "numeric_columns": result_data.get("numeric_columns", []),
+                "categorical_columns": result_data.get("categorical_columns", [])
+            })
+        
+        # Quality check
+        elif tool_name == "detect_data_quality_issues":
+            self.workflow_state.update_quality({
+                "total_issues": result_data.get("total_issues", 0),
+                "has_missing": result_data.get("has_missing", False),
+                "has_outliers": result_data.get("has_outliers", False),
+                "has_duplicates": result_data.get("has_duplicates", False)
+            })
+        
+        # Cleaning tools
+        elif tool_name in ["clean_missing_values", "handle_outliers", "encode_categorical"]:
+            self.workflow_state.update_cleaning({
+                "output_file": result_data.get("output_file") or result_data.get("output_path"),
+                "rows_processed": result_data.get("rows_after") or result_data.get("num_rows"),
+                "tool": tool_name
+            })
+        
+        # Feature engineering
+        elif tool_name in ["create_time_features", "create_interaction_features", "auto_feature_engineering"]:
+            self.workflow_state.update_features({
+                "output_file": result_data.get("output_file") or result_data.get("output_path"),
+                "new_features": result_data.get("new_columns", []),
+                "tool": tool_name
+            })
+        
+        # Model training
+        elif tool_name == "train_baseline_models":
+            models = result_data.get("models", [])
+            best_model = None
+            if models and isinstance(models, list):
+                valid_models = [m for m in models if isinstance(m, dict) and "test_score" in m]
+                if valid_models:
+                    best_model = max(valid_models, key=lambda m: m.get("test_score", 0))
+            
+            self.workflow_state.update_modeling({
+                "best_model": best_model.get("model") if best_model else None,
+                "best_score": best_model.get("test_score") if best_model else None,
+                "models_trained": len(valid_models) if best_model else 0,
+                "task_type": result_data.get("task_type")
+            })
+    
     def analyze(self, file_path: str, task_description: str, 
                target_col: Optional[str] = None, 
                use_cache: bool = True,
@@ -1442,6 +1508,26 @@ You are a DOER. Complete workflows based on user intent."""
             Analysis results including summary and tool outputs
         """
         start_time = time.time()
+        
+        # 🚀 LOCAL SCHEMA EXTRACTION (NO LLM) - Extract metadata before any LLM calls
+        print("🔍 Extracting dataset schema locally (no LLM)...")
+        schema_info = extract_schema_local(file_path, sample_rows=3)
+        
+        if 'error' not in schema_info:
+            # Update workflow state with schema
+            self.workflow_state.update_dataset_info(schema_info)
+            print(f"✅ Schema extracted: {schema_info['num_rows']} rows × {schema_info['num_columns']} cols")
+            print(f"   File size: {schema_info['file_size_mb']} MB")
+            
+            # Infer task type if target column provided
+            if target_col and target_col in schema_info['columns']:
+                inferred_task = infer_task_type(target_col, schema_info)
+                if inferred_task:
+                    self.workflow_state.task_type = inferred_task
+                    self.workflow_state.target_column = target_col
+                    print(f"   Task type inferred: {inferred_task}")
+        else:
+            print(f"⚠️  Schema extraction failed: {schema_info.get('error')}")
         
         # Check cache
         if use_cache:
@@ -1571,11 +1657,25 @@ You are a DOER. Complete workflows based on user intent."""
             # Default full workflow
             workflow_guidance = "\n\n🎯 **WORKFLOW**: Complete Analysis\nExecute: profile → clean → encode → train → report"
         
+        # Build user message with workflow state context (minimal, not full history)
+        state_context = ""
+        if self.workflow_state.dataset_info:
+            # Include schema summary instead of raw data
+            info = self.workflow_state.dataset_info
+            state_context = f"""
+**Dataset Schema** (extracted locally):
+- Rows: {info['num_rows']:,} | Columns: {info['num_columns']}
+- Size: {info['file_size_mb']} MB
+- Numeric columns: {len(info['numeric_columns'])}
+- Categorical columns: {len(info['categorical_columns'])}
+- Sample columns: {', '.join(list(info['columns'].keys())[:8])}{'...' if len(info['columns']) > 8 else ''}
+"""
+        
         user_message = f"""Please analyze the dataset and complete the following task:
 
 **Dataset**: {file_path}
 **Task**: {task_description}
-**Target Column**: {target_col if target_col else 'Not specified - please infer from data'}{workflow_guidance}"""
+**Target Column**: {target_col if target_col else 'Not specified - please infer from data'}{state_context}{workflow_guidance}"""
 
         #🧠 Store file path in session memory for follow-up requests
         if self.session and file_path:
@@ -2298,6 +2398,9 @@ You are a DOER. Complete workflows based on user intent."""
                         "arguments": tool_args,
                         "result": tool_result
                     })
+                    
+                    # 🗂️ UPDATE WORKFLOW STATE (reduces need to send full history to LLM)
+                    self._update_workflow_state(tool_name, tool_result)
                     
                     # ⚡ CRITICAL FIX: Add tool result back to messages so LLM sees it in next iteration!
                     if self.provider == "groq":
