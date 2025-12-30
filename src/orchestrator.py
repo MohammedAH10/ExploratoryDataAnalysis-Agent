@@ -913,8 +913,13 @@ You are a DOER. Complete workflows based on user intent."""
                 if "models" in nested_result:
                     models_data = nested_result["models"]
                     if models_data:
-                        # Find best model
-                        best_model_name = nested_result.get("best_model", "")
+                        # Find best model (best_model is a dict with 'name', 'score', 'model_path')
+                        best_model_info = nested_result.get("best_model", {})
+                        if isinstance(best_model_info, dict):
+                            best_model_name = best_model_info.get("name", "")
+                        else:
+                            best_model_name = str(best_model_info) if best_model_info else ""
+                        
                         best_model_data = models_data.get(best_model_name, {})
                         
                         metrics["best_model"] = {
@@ -2147,25 +2152,40 @@ You are a DOER. Complete workflows based on user intent."""
                     # Final response
                     final_summary = final_content or "Analysis completed"
                     
-                    # 🎯 ENHANCED SUMMARY: Extract metrics and artifacts from workflow
-                    enhanced_summary = self._generate_enhanced_summary(
-                        workflow_history, 
-                        final_summary, 
-                        task_description
-                    )
+                    # 🎯 ENHANCED SUMMARY: Extract metrics and artifacts from workflow (with error handling)
+                    try:
+                        enhanced_summary = self._generate_enhanced_summary(
+                            workflow_history, 
+                            final_summary, 
+                            task_description
+                        )
+                        summary_text = enhanced_summary["text"]
+                        metrics_data = enhanced_summary.get("metrics", {})
+                        artifacts_data = enhanced_summary.get("artifacts", {})
+                        plots_data = enhanced_summary.get("plots", [])
+                        print(f"✅ Enhanced summary generated with {len(plots_data)} plots, {len(metrics_data)} metrics")
+                    except Exception as e:
+                        print(f"⚠️  Enhanced summary generation failed: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        # Fallback: use basic summary
+                        summary_text = final_summary
+                        metrics_data = {}
+                        artifacts_data = {}
+                        plots_data = []
                     
                     # 🧠 Save conversation to session memory
                     if self.session:
-                        self.session.add_conversation(task_description, enhanced_summary["text"])
+                        self.session.add_conversation(task_description, summary_text)
                         self.session_store.save(self.session)
                         print(f"\n✅ Session saved: {self.session.session_id}")
                     
                     result = {
                         "status": "success",
-                        "summary": enhanced_summary["text"],
-                        "metrics": enhanced_summary.get("metrics", {}),
-                        "artifacts": enhanced_summary.get("artifacts", {}),
-                        "plots": enhanced_summary.get("plots", []),
+                        "summary": summary_text,
+                        "metrics": metrics_data,
+                        "artifacts": artifacts_data,
+                        "plots": plots_data,
                         "workflow_history": workflow_history,
                         "iterations": iteration,
                         "api_calls": self.api_calls_made,
