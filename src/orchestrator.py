@@ -2304,7 +2304,25 @@ You are a DOER. Complete workflows based on user intent."""
                             task_description
                         )
                         summary_text = enhanced_summary["text"]
+                        
+                        # 🧹 POST-PROCESS: Remove any file paths that slipped through
+                        import re
+                        # Remove file path patterns
+                        summary_text = re.sub(r'\./outputs/[^\s\)]+', '[generated file]', summary_text)
+                        summary_text = re.sub(r'/outputs/[^\s\)]+', '[generated file]', summary_text)
+                        summary_text = re.sub(r'outputs/[^\s\)]+', '[generated file]', summary_text)
+                        # Remove common file path mentions
+                        summary_text = re.sub(r'saved to:?\s*[^\s]+', 'generated', summary_text, flags=re.IGNORECASE)
+                        summary_text = re.sub(r'output file:?\s*[^\s]+', 'output generated', summary_text, flags=re.IGNORECASE)
+                        summary_text = re.sub(r'file path:?\s*[^\s]+', 'file generated', summary_text, flags=re.IGNORECASE)
+                        # Remove filename patterns in parentheses and backticks
+                        summary_text = re.sub(r'\([^\)]*\.(csv|pkl|html|png|json)[^\)]*\)', '', summary_text)
+                        summary_text = re.sub(r'`[^`]*\.(csv|pkl|html|png|json)[^`]*`', '', summary_text)
+                        # Clean up table separators that mention paths
+                        summary_text = re.sub(r'\|\s*[^\|]*\.(csv|pkl|html|png)[^\|]*\s*\|', '| [see artifacts] |', summary_text)
+                        
                         metrics_data = enhanced_summary.get("metrics", {})
+                        artifacts_data = enhanced_summary.get("artifacts", {})
                         artifacts_data = enhanced_summary.get("artifacts", {})
                         plots_data = enhanced_summary.get("plots", [])
                         print(f"✅ Enhanced summary generated with {len(plots_data)} plots, {len(metrics_data)} metrics")

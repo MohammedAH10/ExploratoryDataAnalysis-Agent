@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Plus, Search, Settings, MoreHorizontal, User, Bot, ArrowLeft, Paperclip, Sparkles, Trash2, X, Upload } from 'lucide-react';
+import { Send, Plus, Search, Settings, MoreHorizontal, User, Bot, ArrowLeft, Paperclip, Sparkles, Trash2, X, Upload, Package, FileText, BarChart3, ChevronRight } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Logo } from './Logo';
 import ReactMarkdown from 'react-markdown';
@@ -48,6 +48,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [currentStep, setCurrentStep] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [reportModalUrl, setReportModalUrl] = useState<string | null>(null);
+  const [showAssets, setShowAssets] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   
@@ -120,6 +121,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         if (uploadedFile) {
           formData.append('file', uploadedFile);
           formData.append('task_description', input || 'Analyze this dataset and provide insights');
+          formData.append('session_id', sessionKey); // Add session_id for progress tracking
         } else if (hasRecentFile) {
           // For follow-up questions, extract the filename from recent context
           const fileNameMatch = recentFileMessage?.content.match(/Uploaded: (.+)/);
@@ -127,7 +129,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           
           // Send follow-up request as a new task description
           formData.append('task_description', input);
-          formData.append('session_id', activeSessionId);
+          formData.append('session_id', sessionKey); // Use same session key
           
           // Note: Backend needs to support session-based file context
           // For now, just send the task which should work with session memory
@@ -426,6 +428,15 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
              </div>
           </div>
           <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setShowAssets(!showAssets)}
+              className={cn(
+                "p-2 transition-colors rounded-lg",
+                showAssets ? "text-emerald-400 bg-emerald-500/10" : "text-white/40 hover:text-white"
+              )}
+            >
+              <Package className="w-5 h-5" />
+            </button>
             <button className="p-2 text-white/40 hover:text-white transition-colors">
               <Search className="w-5 h-5" />
             </button>
@@ -658,6 +669,138 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           </div>
         </div>
       </main>
+      
+      {/* Assets Sidebar */}
+      <AnimatePresence>
+        {showAssets && (
+          <motion.aside
+            initial={{ x: 320, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 320, opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="w-[320px] border-l border-white/5 bg-[#0a0a0a]/95 backdrop-blur-xl flex flex-col"
+          >
+            <div className="p-4 border-b border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-bold text-sm">Assets</h3>
+              </div>
+              <button 
+                onClick={() => setShowAssets(false)}
+                className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+              {/* Collect all assets from messages */}
+              {(() => {
+                const allPlots: Array<{title: string, url: string, type?: string}> = [];
+                const allReports: Array<{name: string, path: string}> = [];
+                const allModels: string[] = [];
+                
+                activeSession.messages.forEach(msg => {
+                  if (msg.plots) allPlots.push(...msg.plots);
+                  if (msg.reports) allReports.push(...msg.reports);
+                  // Extract model references from content
+                  if (msg.content.includes('xgboost') || msg.content.includes('model')) {
+                    const modelMatch = msg.content.match(/\b(xgboost|random_forest|catboost|lightgbm)[^\s]*/gi);
+                    if (modelMatch) allModels.push(...modelMatch);
+                  }
+                });
+                
+                const uniqueModels = [...new Set(allModels)];
+                
+                return (
+                  <>
+                    {/* Models Section */}
+                    {uniqueModels.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <FileText className="w-4 h-4 text-blue-400" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-white/60">Models ({uniqueModels.length})</h4>
+                        </div>
+                        <div className="space-y-2">
+                          {uniqueModels.slice(0, 5).map((model, idx) => (
+                            <div 
+                              key={idx}
+                              className="p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer group"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-white/80 truncate flex-1">{model}</span>
+                                <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-white/80 transition-all" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Plots Section */}
+                    {allPlots.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <BarChart3 className="w-4 h-4 text-emerald-400" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-white/60">Visualizations ({allPlots.length})</h4>
+                        </div>
+                        <div className="space-y-2">
+                          {allPlots.map((plot, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setReportModalUrl(plot.url)}
+                              className="w-full p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all text-left group"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-white/80 truncate flex-1">{plot.title}</span>
+                                <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-emerald-400 transition-all" />
+                              </div>
+                              <span className="text-xs text-white/40 mt-1 block">{plot.type || 'interactive'}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Reports Section */}
+                    {allReports.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <FileText className="w-4 h-4 text-purple-400" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-white/60">Reports ({allReports.length})</h4>
+                        </div>
+                        <div className="space-y-2">
+                          {allReports.map((report, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setReportModalUrl(report.path)}
+                              className="w-full p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-purple-500/10 hover:border-purple-500/30 transition-all text-left group"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-white/80 truncate flex-1">{report.name}</span>
+                                <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-purple-400 transition-all" />
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Empty State */}
+                    {allPlots.length === 0 && allReports.length === 0 && uniqueModels.length === 0 && (
+                      <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                        <Package className="w-12 h-12 text-white/10 mb-3" />
+                        <p className="text-sm text-white/40 mb-1">No assets yet</p>
+                        <p className="text-xs text-white/30">Upload a dataset to generate visualizations and models</p>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
       
       {/* Report Modal */}
       <AnimatePresence>
