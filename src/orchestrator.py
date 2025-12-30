@@ -2183,6 +2183,21 @@ You are a DOER. Complete workflows based on user intent."""
                             "user_intent": user_intent
                         })
                         
+                        # CRITICAL: Add mock tool response to maintain message balance
+                        if self.provider in ["mistral", "groq"]:
+                            messages.append({
+                                "role": "tool",
+                                "tool_call_id": tool_call_id,
+                                "name": tool_name,
+                                "content": json.dumps({"blocked": True, "reason": block_reason})
+                            })
+                        elif self.provider == "gemini":
+                            messages.append({
+                                "role": "tool",
+                                "name": tool_name,
+                                "content": json.dumps({"blocked": True, "reason": block_reason})
+                            })
+                        
                         messages.append(block_warning)
                         continue
                     
@@ -2216,6 +2231,20 @@ You are a DOER. Complete workflows based on user intent."""
                                         f"PROCEED to the next workflow step immediately!"
                                     )
                                 }
+                                # CRITICAL: Add mock tool response
+                                if self.provider in ["mistral", "groq"]:
+                                    messages.append({
+                                        "role": "tool",
+                                        "tool_call_id": tool_call_id,
+                                        "name": tool_name,
+                                        "content": json.dumps({"blocked": True, "reason": "Encoding already done"})
+                                    })
+                                elif self.provider == "gemini":
+                                    messages.append({
+                                        "role": "tool",
+                                        "name": tool_name,
+                                        "content": json.dumps({"blocked": True, "reason": "Encoding already done"})
+                                    })
                                 messages.append(block_warning)
                                 continue
                         
@@ -2234,6 +2263,20 @@ You are a DOER. Complete workflows based on user intent."""
                                         f"DO NOT call execute_python_code for time feature extraction!"
                                     )
                                 }
+                                # CRITICAL: Add mock tool response
+                                if self.provider in ["mistral", "groq"]:
+                                    messages.append({
+                                        "role": "tool",
+                                        "tool_call_id": tool_call_id,
+                                        "name": tool_name,
+                                        "content": json.dumps({"blocked": True, "reason": "Time features already extracted"})
+                                    })
+                                elif self.provider == "gemini":
+                                    messages.append({
+                                        "role": "tool",
+                                        "name": tool_name,
+                                        "content": json.dumps({"blocked": True, "reason": "Time features already extracted"})
+                                    })
                                 messages.append(block_warning)
                                 continue
                     
@@ -2253,6 +2296,20 @@ You are a DOER. Complete workflows based on user intent."""
                                     f"DO NOT call create_time_features again!"
                                 )
                             }
+                            # CRITICAL: Add mock tool response
+                            if self.provider in ["mistral", "groq"]:
+                                messages.append({
+                                    "role": "tool",
+                                    "tool_call_id": tool_call_id,
+                                    "name": tool_name,
+                                    "content": json.dumps({"blocked": True, "reason": "Time features already extracted"})
+                                })
+                            elif self.provider == "gemini":
+                                messages.append({
+                                    "role": "tool",
+                                    "name": tool_name,
+                                    "content": json.dumps({"blocked": True, "reason": "Time features already extracted"})
+                                })
                             messages.append(block_warning)
                             continue
                     
@@ -2271,6 +2328,20 @@ You are a DOER. Complete workflows based on user intent."""
                                     f"DO NOT call encode_categorical again!"
                                 )
                             }
+                            # CRITICAL: Add mock tool response
+                            if self.provider in ["mistral", "groq"]:
+                                messages.append({
+                                    "role": "tool",
+                                    "tool_call_id": tool_call_id,
+                                    "name": tool_name,
+                                    "content": json.dumps({"blocked": True, "reason": "Categorical encoding already done"})
+                                })
+                            elif self.provider == "gemini":
+                                messages.append({
+                                    "role": "tool",
+                                    "name": tool_name,
+                                    "content": json.dumps({"blocked": True, "reason": "Categorical encoding already done"})
+                                })
                             messages.append(block_warning)
                             continue
                     
@@ -2289,6 +2360,20 @@ You are a DOER. Complete workflows based on user intent."""
                                     f"DO NOT call smart_type_inference after encoding!"
                                 )
                             }
+                            # CRITICAL: Add mock tool response
+                            if self.provider in ["mistral", "groq"]:
+                                messages.append({
+                                    "role": "tool",
+                                    "tool_call_id": tool_call_id,
+                                    "name": tool_name,
+                                    "content": json.dumps({"blocked": True, "reason": "Type inference not needed after encoding"})
+                                })
+                            elif self.provider == "gemini":
+                                messages.append({
+                                    "role": "tool",
+                                    "name": tool_name,
+                                    "content": json.dumps({"blocked": True, "reason": "Type inference not needed after encoding"})
+                                })
                             messages.append(block_warning)
                             continue
                     
@@ -2345,6 +2430,30 @@ You are a DOER. Complete workflows based on user intent."""
                             
                             # Otherwise, force LLM to move on with VERY STRONG warning
                             next_step = self._determine_next_step(tool_name, completed_tools)
+                            
+                            # CRITICAL: Add mock tool response to maintain message balance
+                            # (Mistral API requires: every tool call must have a matching tool response)
+                            if self.provider in ["mistral", "groq"]:
+                                messages.append({
+                                    "role": "tool",
+                                    "tool_call_id": tool_call_id,
+                                    "name": tool_name,
+                                    "content": json.dumps({
+                                        "blocked": True,
+                                        "reason": f"Loop detected: {tool_name} called {tool_call_counter[tool_name]} times consecutively",
+                                        "last_successful_file": self._get_last_successful_file(workflow_history)
+                                    })
+                                })
+                            elif self.provider == "gemini":
+                                messages.append({
+                                    "role": "tool",
+                                    "name": tool_name,
+                                    "content": json.dumps({
+                                        "blocked": True,
+                                        "reason": f"Loop detected: {tool_name} called {tool_call_counter[tool_name]} times consecutively"
+                                    })
+                                })
+                            
                             loop_warning = {
                                 "role": "user",
                                 "content": (
