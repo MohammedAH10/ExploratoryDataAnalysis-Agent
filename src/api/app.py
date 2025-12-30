@@ -7,6 +7,7 @@ import os
 import sys
 import tempfile
 import shutil
+import time
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 import logging
@@ -48,6 +49,9 @@ app.add_middleware(
 # Agent itself is stateless - no conversation memory between requests
 agent: Optional[DataScienceCopilot] = None
 
+# Global progress tracking (in-memory for simplicity)
+progress_store: Dict[str, List[Dict[str, Any]]] = {}
+
 # Mount static files for React frontend
 frontend_path = Path(__file__).parent.parent.parent / "FRRONTEEEND" / "dist"
 if frontend_path.exists():
@@ -86,6 +90,15 @@ async def root():
         "status": "healthy",
         "provider": agent.provider if agent else "not initialized",
         "tools_available": len(agent.tool_functions) if agent else 0
+    }
+
+
+@app.get("/api/progress/{session_id}")
+async def get_progress(session_id: str):
+    """Get progress updates for a specific session."""
+    return {
+        "session_id": session_id,
+        "steps": progress_store.get(session_id, [])
     }
 
 
@@ -153,6 +166,18 @@ async def run_analysis(
     if file is None:
         logger.info(f"Follow-up request without file, using session memory")
         logger.info(f"Task: {task_description}")
+        
+        # Initialize progress tracking
+        session_key = session_id or "default"
+        progress_store[session_key] = []
+        
+        def progress_callback(tool_name: str, status: str):
+            """Callback to track progress"""
+            progress_store[session_key].append({
+                "tool": tool_name,
+                "status": status,
+                "timestamp": time.time()
+            })
         
         try:
             # Agent's session memory should resolve file_path from context
@@ -234,7 +259,30 @@ async def run_analysis(
         
         logger.info(f"File saved successfully: {file.filename} ({os.path.getsize(temp_file_path)} bytes)")
         
-        # Call existing agent logic - NO CHANGES to orchestrator
+        # Initialize progress tracking for this session
+        session_key = session_id or "default"
+        progress_store[session_key] = []
+        
+        def progress_callback(tool_name: str, status: str):
+            """Callback to track progress"""
+            progress_store[session_key].append({
+                "tool": tool_name,
+                "status": status,
+                "timestamp": time.time()
+            })
+        
+        # Recreate agent with progress callback
+        global agent
+        provider = os.getenv("LLM_PROVIDER", "mistral")
+        use_compact = provider.lower() in ["mistral", "groq"]
+        agent = DataScienceCopilot(
+            reasoning_effort="medium",
+            provider=provider,
+            use_compact_prompts=use_compact,
+            progress_callback=progress_callback
+        )
+        
+        # Call existing agent logic
         logger.info(f"Starting analysis with task: {task_description}")
         result = agent.analyze(
             file_path=str(temp_file_path),
@@ -267,11 +315,13 @@ async def run_analysis(
         
         serializable_result = make_json_serializable(result)
         
-        # Return result as-is from orchestrator
+        # Return result with progress tracking
         return JSONResponse(
             content={
                 "success": result.get("status") == "success",
                 "result": serializable_result,
+                "progress": progress_store.get(session_key, []),
+                "session_id": session_key,
                 "metadata": {
                     "filename": file.filename,
                     "task": task_description,

@@ -141,7 +141,8 @@ class DataScienceCopilot:
                  provider: Optional[str] = None,
                  session_id: Optional[str] = None,
                  use_session_memory: bool = True,
-                 use_compact_prompts: bool = False):
+                 use_compact_prompts: bool = False,
+                 progress_callback: Optional[callable] = None):
         """
         Initialize the Data Science Copilot.
         
@@ -155,9 +156,13 @@ class DataScienceCopilot:
             session_id: Session ID to resume (None = auto-resume recent or create new)
             use_session_memory: Enable session-based memory for context across requests
             use_compact_prompts: Use compact prompts for small context window models (e.g., Groq)
+            progress_callback: Optional callback function to report progress (receives step_name, status)
         """
         # Load environment variables
         load_dotenv()
+        
+        # Store progress callback
+        self.progress_callback = progress_callback
         
         # Determine provider
         self.provider = provider or os.getenv("LLM_PROVIDER", "mistral").lower()
@@ -405,12 +410,17 @@ class DataScienceCopilot:
         """Build comprehensive system prompt for the copilot."""
         return """You are an autonomous Data Science Agent. You EXECUTE tasks, not advise.
 
-**CRITICAL: User Interface Integration**
+**CRITICAL: User Interface Integration & Response Formatting**
 - The user interface automatically displays clickable buttons for all generated plots, reports, and outputs
-- DO NOT mention file paths (e.g., "./outputs/plots/...") in your responses
+- **NEVER mention file paths** (e.g., "./outputs/plots/...", "./outputs/data/...", etc.) in your responses
+- **NEVER use markdown code blocks** for file paths or structured data in final summaries
 - DO NOT say "Output File: ..." or "Saved to: ..." - users can click buttons to view outputs
 - Simply describe what was created and what insights it shows
-- Example: Instead of "📊 Output File: ./outputs/plots/heatmap.html", say "Generated an interactive correlation heatmap showing relationships between variables"
+- Use clean, aesthetic formatting with proper sections, bullet points, and spacing
+- Example: ❌ "📊 Output File: `./outputs/plots/heatmap.html`" 
+           ✅ "Generated an interactive correlation heatmap showing relationships between variables"
+- Example: ❌ "Saved cleaned data to: `./outputs/data/cleaned.csv`"
+           ✅ "Cleaned the dataset by handling missing values and outliers"
 
 **CRITICAL: Tool Calling Format**
 When you need to use a tool, respond with a JSON block like this:
@@ -969,23 +979,25 @@ You are a DOER. Complete workflows based on user intent."""
                             best_model_name = str(best_model_info) if best_model_info else ""
                         
                         best_model_data = models_data.get(best_model_name, {})
+                        # Metrics are nested inside test_metrics
+                        test_metrics = best_model_data.get("test_metrics", {})
                         
                         metrics["best_model"] = {
                             "name": best_model_name,
-                            "r2_score": best_model_data.get("r2", 0),
-                            "rmse": best_model_data.get("rmse", 0),
-                            "mae": best_model_data.get("mae", 0)
+                            "r2_score": test_metrics.get("r2", 0),
+                            "rmse": test_metrics.get("rmse", 0),
+                            "mae": test_metrics.get("mae", 0)
                         }
                         
-                        # All models comparison
-                        metrics["all_models"] = {
-                            name: {
-                                "r2": data.get("r2", 0),
-                                "rmse": data.get("rmse", 0),
-                                "mae": data.get("mae", 0)
-                            }
-                            for name, data in models_data.items()
-                        }
+                        # All models comparison - extract test_metrics for each
+                        metrics["all_models"] = {}
+                        for name, data in models_data.items():
+                            if isinstance(data, dict) and "test_metrics" in data:
+                                metrics["all_models"][name] = {
+                                    "r2": data["test_metrics"].get("r2", 0),
+                                    "rmse": data["test_metrics"].get("rmse", 0),
+                                    "mae": data["test_metrics"].get("mae", 0)
+                                }
                 
                 # Extract model artifacts
                 if "model_path" in nested_result:
@@ -1083,30 +1095,52 @@ You are a DOER. Complete workflows based on user intent."""
         
         # Build enhanced text summary
         summary_lines = [
-            f"## 📊 Analysis Complete: {task_description}",
+            f"## 📊 Analysis Complete",
             "",
             llm_summary,
             ""
         ]
         
-        # Add model metrics if available
-        if "best_model" in metrics:
-            best = metrics["best_model"]
+        # Show all baseline models comparison first
+        if "all_models" in metrics and metrics["all_models"]:
             summary_lines.extend([
-                "### 🏆 Best Model Performance",
-                f"- **Model**: {best['name']}",
-                f"- **R² Score**: {best['r2_score']:.4f}",
-                f"- **RMSE**: {best['rmse']:.4f}",
-                f"- **MAE**: {best['mae']:.4f}",
+                "### 🔬 Baseline Models Comparison",
                 ""
             ])
+            
+            # Sort models by R² score (descending)
+            sorted_models = sorted(
+                metrics["all_models"].items(),
+                key=lambda x: x[1].get("r2", 0),
+                reverse=True
+            )
+            
+            for model_name, model_metrics in sorted_models:
+                r2 = model_metrics.get("r2", 0)
+                rmse = model_metrics.get("rmse", 0)
+                mae = model_metrics.get("mae", 0)
+                
+                # Highlight the best model with emoji
+                is_best = (
+                    "best_model" in metrics and 
+                    metrics["best_model"].get("name", "") == model_name
+                )
+                prefix = "🏆 " if is_best else "  "
+                
+                summary_lines.append(
+                    f"{prefix}**{model_name.replace('_', ' ').title()}**: "
+                    f"R²={r2:.4f}, RMSE={rmse:.4f}, MAE={mae:.4f}"
+                )
+            
+            summary_lines.append("")
         
+        # Show tuned model separately if hyperparameter tuning was done
         if "tuned_model" in metrics:
             tuned = metrics["tuned_model"]
             summary_lines.extend([
-                "### ⚙️ Hyperparameter Tuning",
-                f"- **Model Type**: {tuned['model_type']}",
-                f"- **Best Score**: {tuned['best_score']:.4f}",
+                "### ⚙️ Hyperparameter Tuning Results",
+                f"- **Model Type**: {tuned.get('model_type', 'N/A')}",
+                f"- **Optimized Score**: {tuned.get('best_score', 0):.4f}",
                 ""
             ])
         
@@ -1170,6 +1204,10 @@ You are a DOER. Complete workflows based on user intent."""
             }
         
         try:
+            # Report progress before executing
+            if self.progress_callback:
+                self.progress_callback(tool_name, "running")
+            
             tool_func = self.tool_functions[tool_name]
             
             # Fix common parameter mismatches from LLM hallucinations
@@ -1201,6 +1239,9 @@ You are a DOER. Complete workflows based on user intent."""
                     "error": result.get("message", result.get("error", "Tool returned error status")),
                     "error_type": "ToolError"
                 }
+                # Report failure
+                if self.progress_callback:
+                    self.progress_callback(tool_name, "failed")
             else:
                 tool_result = {
                     "success": True,
@@ -1208,6 +1249,9 @@ You are a DOER. Complete workflows based on user intent."""
                     "arguments": arguments,
                     "result": result
                 }
+                # Report success
+                if self.progress_callback:
+                    self.progress_callback(tool_name, "completed")
             
             # 🧠 Update session memory with tool execution
             if self.session:

@@ -45,6 +45,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [activeSessionId, setActiveSessionId] = useState('1');
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [currentStep, setCurrentStep] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [reportModalUrl, setReportModalUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -135,6 +136,9 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       }
 
       const data = await response.json();
+      
+      // Clear progress indicator
+      setCurrentStep('');
       
       let assistantContent = '';
       let reports: Array<{name: string, path: string}> = [];
@@ -530,11 +534,24 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   <Bot className="w-4 h-4 text-indigo-400" />
                 </div>
                 <div className="bg-white/[0.03] p-4 rounded-2xl border border-white/5">
-                  <div className="flex gap-1">
-                    <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                    <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                    <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce"></span>
-                  </div>
+                  {currentStep ? (
+                    <div className="flex items-center gap-3">
+                      <div className="flex gap-1">
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce"></span>
+                      </div>
+                      <span className="text-sm text-white/60">
+                        🔧 {currentStep.replace(/_/g, ' ').replace('train', 'Training').replace('clean', 'Cleaning').replace('generate', 'Generating').replace(/\b\w/g, l => l.toUpperCase())}...
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex gap-1">
+                      <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                      <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                      <span className="w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce"></span>
+                    </div>
+                  )}
                 </div>
              </div>
           )}
