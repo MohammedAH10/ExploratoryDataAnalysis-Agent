@@ -474,7 +474,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       {msg.content || ''}
                     </ReactMarkdown>
                   ) : (
-                    msg.content || (msg.role === 'assistant' && isTyping && "...")
+                    msg.content
                   )}
                   {msg.reports && msg.reports.length > 0 && (
                     <div className="mt-4 flex flex-wrap gap-2">

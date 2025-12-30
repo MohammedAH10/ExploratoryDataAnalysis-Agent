@@ -171,7 +171,7 @@ class DataScienceCopilot:
             if not api_key:
                 raise ValueError("Mistral API key must be provided or set in MISTRAL_API_KEY env var")
             
-            from mistralai.client import MistralClient
+            from mistralai.client import MistralClient  # type: ignore
             self.mistral_client = MistralClient(api_key=api_key.strip())
             self.model = os.getenv("MISTRAL_MODEL", "mistral-large-latest")
             self.reasoning_effort = reasoning_effort
