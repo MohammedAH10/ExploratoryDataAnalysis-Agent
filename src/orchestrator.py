@@ -987,13 +987,30 @@ You are a DOER. Complete workflows based on user intent."""
                         "url": f"/outputs/{report_path.replace('./outputs/', '')}"
                     })
             
-            # === COLLECT PLOT FILES ===
+            # === COLLECT VISUALIZATION FILES (interactive plots, charts, etc.) ===
+            elif "plot" in tool.lower() or "visualiz" in tool.lower() or "chart" in tool.lower() or "heatmap" in tool.lower() or "scatter" in tool.lower() or "histogram" in tool.lower():
+                if "output_path" in nested_result:
+                    plot_path = nested_result["output_path"]
+                    # Extract plot title from tool name or filename
+                    plot_title = tool.replace("generate_", "").replace("interactive_", "").replace("_", " ").title()
+                    if not plot_title or plot_title == "Output Path":
+                        plot_title = plot_path.split("/")[-1].replace("_", " ").replace(".html", "").replace(".png", "").title()
+                    
+                    plots.append({
+                        "title": plot_title,
+                        "path": plot_path,
+                        "url": f"/outputs/{plot_path.replace('./outputs/', '')}",
+                        "type": "html" if plot_path.endswith(".html") else "image"
+                    })
+            
+            # === COLLECT PLOT FILES (from plot_paths key) ===
             if "plot_paths" in nested_result:
                 for plot_path in nested_result["plot_paths"]:
                     plots.append({
-                        "title": plot_path.split("/")[-1].replace("_", " ").replace(".png", "").title(),
+                        "title": plot_path.split("/")[-1].replace("_", " ").replace(".png", "").replace(".html", "").title(),
                         "path": plot_path,
-                        "url": f"/outputs/{plot_path.replace('./outputs/', '')}"
+                        "url": f"/outputs/{plot_path.replace('./outputs/', '')}",
+                        "type": "html" if plot_path.endswith(".html") else "image"
                     })
             
             # === COLLECT DATA FILES ===
