@@ -1928,12 +1928,12 @@ You are a DOER. Complete workflows based on user intent."""
                     return result
                 
                 # Execute tool calls (provider-specific format)
-                if self.provider == "groq":
+                if self.provider in ["groq", "mistral"]:
                     messages.append(response_message)
                 
                 for tool_call in tool_calls:
                     # Extract tool name and args (provider-specific)
-                    if self.provider == "groq":
+                    if self.provider in ["groq", "mistral"]:
                         tool_name = tool_call.function.name
                         tool_args = json.loads(tool_call.function.arguments)
                         tool_call_id = tool_call.id
