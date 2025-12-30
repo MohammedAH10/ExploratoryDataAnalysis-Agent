@@ -135,6 +135,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       }
 
       const data = await response.json();
+      console.log('📊 API Response:', JSON.stringify(data, null, 2));
       
       let assistantContent = '';
       let reports: Array<{name: string, path: string}> = [];
@@ -143,6 +144,8 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       // Check for reports in any /run endpoint response (not just when file is uploaded)
       if (data.result) {
         const result = data.result;
+        console.log('📈 Plots in result:', result.plots);
+        console.log('📊 Artifacts in result:', result.artifacts);
         assistantContent = `✅ Analysis Complete!\n\n`;
         
         // Extract plots from result
@@ -152,6 +155,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             url: plot.url || plot.path?.replace('./outputs/', '/outputs/'),
             type: (plot.url || plot.path)?.endsWith('.html') ? 'html' : 'image'
           }));
+          console.log('✅ Extracted plots:', plots);
         }
         
         // Extract report paths from workflow history
@@ -196,6 +200,8 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       } else {
         throw new Error('Invalid response from API');
       }
+      
+      console.log('🎯 Final message data - Reports:', reports.length, 'Plots:', plots.length);
       
       updateSession(activeSessionId, [...newMessages, {
         id: (Date.now() + 1).toString(),
@@ -473,12 +479,14 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     </div>
                   )}
                   {msg.plots && msg.plots.length > 0 && (
-                    <div className="mt-4 space-y-3">
-                      <div className="text-xs font-semibold text-white/60 mb-2">
-                        📊 Generated Visualizations ({msg.plots.length})
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {msg.plots.map((plot, idx) => (
+                    <>
+                      {console.log('🎨 Rendering plots for message:', msg.id, msg.plots)}
+                      <div className="mt-4 space-y-3">
+                        <div className="text-xs font-semibold text-white/60 mb-2">
+                          📊 Generated Visualizations ({msg.plots.length})
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {msg.plots.map((plot, idx) => (
                           <button
                             key={idx}
                             onClick={() => setReportModalUrl(`${window.location.origin}${plot.url}`)}
@@ -492,6 +500,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         ))}
                       </div>
                     </div>
+                    </>
                   )}
                   <div className="mt-2 text-[10px] opacity-20 font-mono">
                     {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
