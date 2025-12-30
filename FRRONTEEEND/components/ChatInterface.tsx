@@ -161,15 +161,46 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         // Extract report paths from workflow history
         if (result.workflow_history) {
           const reportTools = ['generate_ydata_profiling_report', 'generate_plotly_dashboard', 'generate_all_plots'];
+          const plotTools = [
+            'generate_interactive_correlation_heatmap',
+            'generate_interactive_scatter',
+            'generate_interactive_histogram',
+            'generate_interactive_box_plots',
+            'generate_interactive_time_series',
+            'generate_eda_plots',
+            'generate_data_quality_plots',
+            'analyze_correlations'
+          ];
+          
           result.workflow_history.forEach((step: any) => {
+            // Extract reports
             if (reportTools.includes(step.tool)) {
-              // Check multiple possible locations for the report path
               const reportPath = step.result?.output_path || step.result?.report_path || step.arguments?.output_path;
               
               if (reportPath && (step.result?.success !== false)) {
                 reports.push({
                   name: step.tool.replace('generate_', '').replace(/_/g, ' ').replace('report', '').trim(),
                   path: reportPath
+                });
+              }
+            }
+            
+            // Extract plots
+            if (plotTools.includes(step.tool)) {
+              const plotPath = step.result?.output_path || step.arguments?.output_path;
+              
+              if (plotPath && (step.result?.success !== false)) {
+                const plotTitle = step.tool
+                  .replace('generate_', '')
+                  .replace('interactive_', '')
+                  .replace(/_/g, ' ')
+                  .replace('plots', 'plot')
+                  .trim();
+                
+                plots.push({
+                  title: plotTitle.charAt(0).toUpperCase() + plotTitle.slice(1),
+                  url: plotPath.replace('./outputs/', '/outputs/'),
+                  type: plotPath.endsWith('.html') ? 'html' : 'image'
                 });
               }
             }
