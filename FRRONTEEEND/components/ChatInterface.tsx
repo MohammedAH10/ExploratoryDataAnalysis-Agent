@@ -509,6 +509,19 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       })}
                     </div>
                   )}
+                  {/* DEBUG: Force show plots section */}
+                  {msg.role === 'assistant' && msg.content?.includes('Visualizations') && (
+                    <div className="mt-4 space-y-3 border-2 border-yellow-500">
+                      <div className="text-xs font-semibold text-yellow-400 mb-2">
+                        🐛 DEBUG: Plots section (should appear if msg has Visualizations in content)
+                      </div>
+                      <div className="text-xs text-white/60">
+                        msg.plots exists: {msg.plots ? 'YES' : 'NO'}<br/>
+                        msg.plots length: {msg.plots?.length || 0}<br/>
+                        msg.plots data: {JSON.stringify(msg.plots)}
+                      </div>
+                    </div>
+                  )}
                   {msg.plots && msg.plots.length > 0 && (
                     <>
                       {console.log('🎨 Rendering plots for message:', msg.id, msg.plots)}
