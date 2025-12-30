@@ -135,6 +135,7 @@ class DataScienceCopilot:
     
     def __init__(self, groq_api_key: Optional[str] = None, 
                  google_api_key: Optional[str] = None,
+                 mistral_api_key: Optional[str] = None,
                  cache_db_path: Optional[str] = None,
                  reasoning_effort: str = "medium",
                  provider: Optional[str] = None,
@@ -147,6 +148,7 @@ class DataScienceCopilot:
         Args:
             groq_api_key: Groq API key (or set GROQ_API_KEY env var)
             google_api_key: Google API key (or set GOOGLE_API_KEY env var)
+            mistral_api_key: Mistral API key (or set MISTRAL_API_KEY env var)
             cache_db_path: Path to cache database
             reasoning_effort: Reasoning effort for Groq ('low', 'medium', 'high')
             provider: LLM provider - 'groq' or 'gemini' (or set LLM_PROVIDER env var)
@@ -158,12 +160,26 @@ class DataScienceCopilot:
         load_dotenv()
         
         # Determine provider
-        self.provider = provider or os.getenv("LLM_PROVIDER", "groq").lower()
+        self.provider = provider or os.getenv("LLM_PROVIDER", "mistral").lower()
         
-        # Set compact prompts: Auto-enable for Groq, manual for others
-        self.use_compact_prompts = use_compact_prompts or (self.provider == "groq")
+        # Set compact prompts: Auto-enable for Groq/Mistral, manual for others
+        self.use_compact_prompts = use_compact_prompts or (self.provider in ["groq", "mistral"])
         
-        if self.provider == "groq":
+        if self.provider == "mistral":
+            # Initialize Mistral client (OpenAI-compatible)
+            api_key = mistral_api_key or os.getenv("MISTRAL_API_KEY")
+            if not api_key:
+                raise ValueError("Mistral API key must be provided or set in MISTRAL_API_KEY env var")
+            
+            from mistralai import Mistral
+            self.mistral_client = Mistral(api_key=api_key)
+            self.model = os.getenv("MISTRAL_MODEL", "mistral-large-latest")
+            self.reasoning_effort = reasoning_effort
+            self.gemini_model = None
+            self.groq_client = None
+            print(f"🤖 Initialized with Mistral provider - Model: {self.model}")
+            
+        elif self.provider == "groq":
             # Initialize Groq client
             api_key = groq_api_key or os.getenv("GROQ_API_KEY")
             if not api_key:
@@ -173,6 +189,7 @@ class DataScienceCopilot:
             self.model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
             self.reasoning_effort = reasoning_effort
             self.gemini_model = None
+            self.mistral_client = None
             print(f"🤖 Initialized with Groq provider - Model: {self.model}")
             
         elif self.provider == "gemini":
@@ -198,9 +215,11 @@ class DataScienceCopilot:
                 safety_settings=safety_settings
             )
             self.groq_client = None
+            self.mistral_client = None
             print(f"🤖 Initialized with Gemini provider - Model: {self.model}")
             
         else:
+            raise ValueError(f"Invalid provider: {self.provider}. Must be 'mistral', 'groq', or 'gemini'")
             raise ValueError(f"Unsupported provider: {self.provider}. Choose 'groq' or 'gemini'")
         
         # Initialize cache
@@ -253,7 +272,11 @@ class DataScienceCopilot:
         self.api_calls_made = 0
         
         # Provider-specific limits
-        if self.provider == "groq":
+        if self.provider == "mistral":
+            self.tpm_limit = 500000  # 500K tokens/minute (very generous)
+            self.rpm_limit = 500     # 500 requests/minute
+            self.min_api_call_interval = 0.1  # Minimal delay
+        elif self.provider == "groq":
             self.tpm_limit = 12000  # Tokens per minute
             self.rpm_limit = 30     # Requests per minute
             self.min_api_call_interval = 0.5  # Wait between calls
@@ -1726,8 +1749,8 @@ You are a DOER. Complete workflows based on user intent."""
                     messages = [messages[0], messages[1]] + messages[-4:]
                     print(f"⚠️  Emergency pruning (conversation > 8K tokens)")
                 
-                # 💰 Token budget management (Groq TPM limit)
-                if self.provider == "groq":
+                # 💰 Token budget management (TPM limit)
+                if self.provider in ["mistral", "groq"]:
                     # Reset minute counter if needed
                     elapsed = time.time() - self.minute_start_time
                     if elapsed > 60:
@@ -1764,7 +1787,36 @@ You are a DOER. Complete workflows based on user intent."""
                 response_message = None
                 
                 # Call LLM with function calling (provider-specific)
-                if self.provider == "groq":
+                if self.provider == "mistral":
+                    try:
+                        response = self.mistral_client.chat.complete(
+                            model=self.model,
+                            messages=messages,
+                            tools=tools_to_use,
+                            tool_choice="auto",
+                            temperature=0.1,
+                            max_tokens=4096
+                        )
+                        
+                        self.api_calls_made += 1
+                        self.last_api_call_time = time.time()
+                        
+                        # Track tokens used (for TPM budget management)
+                        if hasattr(response, 'usage') and response.usage:
+                            tokens_used = response.usage.total_tokens
+                            self.tokens_this_minute += tokens_used
+                            print(f"📊 Tokens: {tokens_used} this call | {self.tokens_this_minute}/{self.tpm_limit} this minute")
+                        
+                        response_message = response.choices[0].message
+                        tool_calls = response_message.tool_calls
+                        final_content = response_message.content
+                        
+                    except Exception as mistral_error:
+                        error_str = str(mistral_error)
+                        print(f"❌ MISTRAL ERROR: {error_str[:300]}")
+                        raise
+                
+                elif self.provider == "groq":
                     try:
                         response = self.groq_client.chat.completions.create(
                             model=self.model,
@@ -2406,9 +2458,9 @@ You are a DOER. Complete workflows based on user intent."""
                     self._update_workflow_state(tool_name, tool_result)
                     
                     # ⚡ CRITICAL FIX: Add tool result back to messages so LLM sees it in next iteration!
-                    if self.provider == "groq":
-                        # For Groq, add tool message with the result
-                        # **COMPRESS RESULT** for small context models (Groq 12K token limit)
+                    if self.provider in ["mistral", "groq"]:
+                        # For Mistral/Groq, add tool message with the result
+                        # **COMPRESS RESULT** for small context models
                         clean_tool_result = self._make_json_serializable(tool_result)
                         
                         # Smart compression: Keep only what LLM needs for next decision

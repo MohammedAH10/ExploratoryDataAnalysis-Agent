@@ -1,5 +1,6 @@
 # Core Dependencies
 groq>=0.13.0  # Updated for httpx compatibility
+mistralai>=1.0.0  # Mistral AI - 1B tokens/month
 python-dotenv==1.0.0
 
 # Data Processing

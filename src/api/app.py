@@ -61,9 +61,9 @@ async def startup_event():
     global agent
     try:
         logger.info("Initializing DataScienceCopilot...")
-        provider = os.getenv("LLM_PROVIDER", "groq")
-        # Auto-enable compact prompts for Groq (small context window)
-        use_compact = provider.lower() == "groq"
+        provider = os.getenv("LLM_PROVIDER", "mistral")
+        # Auto-enable compact prompts for Mistral/Groq (smaller context windows)
+        use_compact = provider.lower() in ["mistral", "groq"]
         
         agent = DataScienceCopilot(
             reasoning_effort="medium",
