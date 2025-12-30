@@ -74,8 +74,35 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     updateSession(activeSessionId, newMessages);
     setInput('');
     setIsTyping(true);
+    
+    // Start polling for progress updates
+    const sessionKey = activeSessionId || 'default';
+    let progressInterval: NodeJS.Timeout | null = null;
+    
+    const pollProgress = async () => {
+      try {
+        const API_URL = window.location.origin;
+        const progressResponse = await fetch(`${API_URL}/api/progress/${sessionKey}`);
+        if (progressResponse.ok) {
+          const progressData = await progressResponse.json();
+          const steps = progressData.steps || [];
+          
+          // Find the most recent running step
+          const runningSteps = steps.filter((s: any) => s.status === 'running');
+          if (runningSteps.length > 0) {
+            const lastStep = runningSteps[runningSteps.length - 1];
+            setCurrentStep(lastStep.tool);
+          }
+        }
+      } catch (err) {
+        console.error('Progress polling error:', err);
+      }
+    };
 
     try {
+      // Start polling every 1 second
+      progressInterval = setInterval(pollProgress, 1000);
+      
       // Use the current origin if running on same server, otherwise use env variable
       const API_URL = window.location.origin;
       console.log('API URL:', API_URL);
@@ -137,7 +164,10 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
       const data = await response.json();
       
-      // Clear progress indicator
+      // Stop progress polling and clear indicator
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
       setCurrentStep('');
       
       let assistantContent = '';
@@ -234,6 +264,12 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     } catch (error: any) {
       console.error("Chat Error:", error);
       
+      // Stop progress polling
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+      setCurrentStep('');
+      
       let errorMessage = "I'm sorry, I encountered an error processing your request.";
       
       if (error.message) {
@@ -260,6 +296,11 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         timestamp: new Date()
       }]);
     } finally {
+      // Stop progress polling
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+      setCurrentStep('');
       setIsTyping(false);
     }
   };

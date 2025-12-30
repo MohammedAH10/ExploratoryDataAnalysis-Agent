@@ -412,15 +412,17 @@ class DataScienceCopilot:
 
 **CRITICAL: User Interface Integration & Response Formatting**
 - The user interface automatically displays clickable buttons for all generated plots, reports, and outputs
-- **NEVER mention file paths** (e.g., "./outputs/plots/...", "./outputs/data/...", etc.) in your responses
-- **NEVER use markdown code blocks** for file paths or structured data in final summaries
-- DO NOT say "Output File: ..." or "Saved to: ..." - users can click buttons to view outputs
-- Simply describe what was created and what insights it shows
-- Use clean, aesthetic formatting with proper sections, bullet points, and spacing
-- Example: ❌ "📊 Output File: `./outputs/plots/heatmap.html`" 
-           ✅ "Generated an interactive correlation heatmap showing relationships between variables"
-- Example: ❌ "Saved cleaned data to: `./outputs/data/cleaned.csv`"
-           ✅ "Cleaned the dataset by handling missing values and outliers"
+- **ABSOLUTELY FORBIDDEN**: NEVER EVER mention file paths in your responses
+  - ❌ NEVER write: "./outputs/...", "/outputs/...", "saved to", "output file:", "file path:"
+  - ❌ NEVER use markdown code blocks for file paths (no backticks around paths)
+  - ❌ NEVER say: "Output File:", "Saved to:", "File:", "Path:", "Location:"
+- **WHAT TO SAY INSTEAD**:
+  - ✅ "Generated an interactive correlation heatmap"
+  - ✅ "Cleaned the dataset by handling missing values"
+  - ✅ "Created visualizations showing the relationships"
+  - ✅ "Trained multiple models and optimized the best performer"
+- Users can click buttons to view outputs - you don't need to tell them where files are
+- Use clean, aesthetic formatting with sections, bullets, and proper spacing
 
 **CRITICAL: Tool Calling Format**
 When you need to use a tool, respond with a JSON block like this:
@@ -834,8 +836,12 @@ When you've finished all tool executions and are ready to return the final respo
    - What patterns were discovered in the data?
    - What were the most important features?
    - Were there any interesting correlations or anomalies?
-3. **Model performance** (if trained):
-   - Best model name and metrics (R², RMSE, MAE)
+3. **Model performance** (if trained) - **CRITICAL: YOU MUST INCLUDE THESE METRICS**:
+   - **ALWAYS extract and display** the exact metrics from tool results:
+   - R² Score, RMSE, MAE from the train_baseline_models results
+   - List ALL models trained (not just the best one)
+   - Example: "Trained 6 models: XGBoost (R²=0.713, RMSE=0.207), Random Forest (R²=0.685, RMSE=0.218), etc."
+   - If hyperparameter tuning was done, show before/after comparison
    - How accurate is the model? What does the score mean in practical terms?
    - Were there any challenges (imbalanced data, multicollinearity, etc.)?
 4. **Recommendations**:
@@ -1093,15 +1099,13 @@ You are a DOER. Complete workflows based on user intent."""
                     "url": f"/outputs/{nested_result['output_path'].replace('./outputs/', '')}"
                 })
         
-        # Build enhanced text summary
+        # Build enhanced text summary - start with metrics then LLM explanation
         summary_lines = [
             f"## 📊 Analysis Complete",
-            "",
-            llm_summary,
             ""
         ]
         
-        # Show all baseline models comparison first
+        # Show all baseline models comparison FIRST (before LLM summary)
         if "all_models" in metrics and metrics["all_models"]:
             summary_lines.extend([
                 "### 🔬 Baseline Models Comparison",
@@ -1149,6 +1153,17 @@ You are a DOER. Complete workflows based on user intent."""
             summary_lines.extend([
                 "### ✅ Cross-Validation Results",
                 f"- **Mean Score**: {cv['mean_score']:.4f} (± {cv['std_score']:.4f})",
+                ""
+            ])
+        
+        # Add LLM's explanation after metrics
+        if llm_summary and llm_summary.strip():
+            summary_lines.extend([
+                "---",
+                "",
+                "### 📝 Analysis Summary",
+                "",
+                llm_summary,
                 ""
             ])
         
