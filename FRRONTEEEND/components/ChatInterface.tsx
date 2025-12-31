@@ -88,11 +88,17 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           const progressData = await progressResponse.json();
           const steps = progressData.steps || [];
           
-          // Find the most recent running step
-          const runningSteps = steps.filter((s: any) => s.status === 'running');
-          if (runningSteps.length > 0) {
-            const lastStep = runningSteps[runningSteps.length - 1];
-            setCurrentStep(lastStep.tool);
+          if (steps.length > 0) {
+            const latestStep = steps[steps.length - 1];
+            const toolName = latestStep.tool
+              .replace(/_/g, ' ')
+              .replace(/generate/gi, 'Generating')
+              .replace(/train/gi, 'Training')
+              .replace(/clean/gi, 'Cleaning')
+              .replace(/create/gi, 'Creating')
+              .replace(/perform/gi, 'Performing')
+              .replace(/\b\w/g, (l: string) => l.toUpperCase());
+            setCurrentStep(toolName);
           }
         }
       } catch (err) {
@@ -694,50 +700,35 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-              {/* Collect all assets from messages */}
               {(() => {
                 const allPlots: Array<{title: string, url: string, type?: string}> = [];
                 const allReports: Array<{name: string, path: string}> = [];
-                const allModels: string[] = [];
+                const allDataFiles: string[] = [];
+                const baselineModels = ['xgboost', 'random_forest', 'catboost', 'lightgbm', 'ridge', 'lasso'];
+                const foundModels = new Set<string>();
                 
                 activeSession.messages.forEach(msg => {
                   if (msg.plots) allPlots.push(...msg.plots);
                   if (msg.reports) allReports.push(...msg.reports);
-                  // Extract model references from content
-                  if (msg.content.includes('xgboost') || msg.content.includes('model')) {
-                    const modelMatch = msg.content.match(/\b(xgboost|random_forest|catboost|lightgbm)[^\s]*/gi);
-                    if (modelMatch) allModels.push(...modelMatch);
+                  
+                  baselineModels.forEach(model => {
+                    if (msg.content.toLowerCase().includes(model)) {
+                      const displayName = model.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                      foundModels.add(displayName);
+                    }
+                  });
+                  
+                  if (msg.content.includes('Cleaned') || msg.content.includes('encoded')) {
+                    allDataFiles.push('Cleaned & Encoded Dataset');
                   }
                 });
                 
-                const uniqueModels = [...new Set(allModels)];
+                const uniqueDataFiles = [...new Set(allDataFiles)];
+                const uniqueModels = Array.from(foundModels);
                 
                 return (
                   <>
-                    {/* Models Section */}
-                    {uniqueModels.length > 0 && (
-                      <div>
-                        <div className="flex items-center gap-2 mb-3">
-                          <FileText className="w-4 h-4 text-blue-400" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-white/60">Models ({uniqueModels.length})</h4>
-                        </div>
-                        <div className="space-y-2">
-                          {uniqueModels.slice(0, 5).map((model, idx) => (
-                            <div 
-                              key={idx}
-                              className="p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all cursor-pointer group"
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm text-white/80 truncate flex-1">{model}</span>
-                                <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-white/80 transition-all" />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Plots Section */}
+                    {/* Plots Section FIRST */}
                     {allPlots.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-3">
@@ -757,6 +748,53 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                               </div>
                               <span className="text-xs text-white/40 mt-1 block">{plot.type || 'interactive'}</span>
                             </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Data Files Section */}
+                    {uniqueDataFiles.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <FileText className="w-4 h-4 text-blue-400" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-white/60">Data Files ({uniqueDataFiles.length})</h4>
+                        </div>
+                        <div className="space-y-2">
+                          {uniqueDataFiles.map((file, idx) => (
+                            <div 
+                              key={idx}
+                              className="p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-blue-500/10 transition-all cursor-pointer group"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-white/80 truncate flex-1">{file}</span>
+                                <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-blue-400 transition-all" />
+                              </div>
+                              <span className="text-xs text-white/40 mt-1 block">Dataset</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Models Section */}
+                    {uniqueModels.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <FileText className="w-4 h-4 text-purple-400" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-white/60">Models ({uniqueModels.length})</h4>
+                        </div>
+                        <div className="space-y-2">
+                          {uniqueModels.map((model, idx) => (
+                            <div 
+                              key={idx}
+                              className="p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-purple-500/10 transition-all cursor-pointer group"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-white/80 truncate flex-1">{model}</span>
+                                <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-purple-400 transition-all" />
+                              </div>
+                            </div>
                           ))}
                         </div>
                       </div>
