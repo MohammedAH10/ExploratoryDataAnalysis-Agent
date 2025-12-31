@@ -51,8 +51,18 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [showAssets, setShowAssets] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const activeSession = sessions.find(s => s.id === activeSessionId) || sessions[0];
+
+  // Cleanup progress interval on unmount
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -60,26 +70,20 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   }, [activeSession.messages, isTyping]);
 
-  const handleSend = async () => {
-    if ((!input.trim() && !uploadedFile) || isTyping) return;
+  // Setup progress polling only when typing is active
+  useEffect(() => {
+    if (!isTyping) {
+      // Stop polling when not typing
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      setCurrentStep('');
+      return;
+    }
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input || (uploadedFile ? `Uploaded: ${uploadedFile.name}` : ''),
-      timestamp: new Date(),
-      file: uploadedFile ? { name: uploadedFile.name, size: uploadedFile.size } : undefined,
-    };
-
-    const newMessages = [...activeSession.messages, userMessage];
-    updateSession(activeSessionId, newMessages);
-    setInput('');
-    setIsTyping(true);
-    
-    // Start polling for progress updates
     const sessionKey = activeSessionId || 'default';
-    let progressInterval: NodeJS.Timeout | null = null;
-    
+
     const pollProgress = async () => {
       try {
         const API_URL = window.location.origin;
@@ -87,7 +91,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         if (progressResponse.ok) {
           const progressData = await progressResponse.json();
           const steps = progressData.steps || [];
-          
+
           if (steps.length > 0) {
             const latestStep = steps[steps.length - 1];
             const toolName = latestStep.tool
@@ -106,15 +110,42 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       }
     };
 
+    // Start polling only when isTyping is true
+    progressIntervalRef.current = setInterval(pollProgress, 1000);
+
+    // Cleanup on unmount or when isTyping becomes false
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+    };
+  }, [isTyping, activeSessionId]);
+
+  const handleSend = async () => {
+    if ((!input.trim() && !uploadedFile) || isTyping) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: input || (uploadedFile ? `Uploaded: ${uploadedFile.name}` : ''),
+      timestamp: new Date(),
+      file: uploadedFile ? { name: uploadedFile.name, size: uploadedFile.size } : undefined,
+    };
+
+    const newMessages = [...activeSession.messages, userMessage];
+    updateSession(activeSessionId, newMessages);
+    setInput('');
+    setIsTyping(true);
+
     try {
-      // Start polling every 1 second
-      progressInterval = setInterval(pollProgress, 1000);
       
       // Use the current origin if running on same server, otherwise use env variable
       const API_URL = window.location.origin;
       console.log('API URL:', API_URL);
       
       let response;
+      const sessionKey = activeSessionId || 'default';
       
       // Check if there's a recent file analysis in the conversation
       const recentFileMessage = newMessages.slice(-5).find(m => m.file || m.content.includes('Uploaded:'));
@@ -171,12 +202,6 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       }
 
       const data = await response.json();
-      
-      // Stop progress polling and clear indicator
-      if (progressInterval) {
-        clearInterval(progressInterval);
-      }
-      setCurrentStep('');
       
       let assistantContent = '';
       let reports: Array<{name: string, path: string}> = [];
@@ -272,12 +297,6 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     } catch (error: any) {
       console.error("Chat Error:", error);
       
-      // Stop progress polling
-      if (progressInterval) {
-        clearInterval(progressInterval);
-      }
-      setCurrentStep('');
-      
       let errorMessage = "I'm sorry, I encountered an error processing your request.";
       
       if (error.message) {
@@ -304,11 +323,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         timestamp: new Date()
       }]);
     } finally {
-      // Stop progress polling
-      if (progressInterval) {
-        clearInterval(progressInterval);
-      }
-      setCurrentStep('');
+      // Setting isTyping to false will trigger useEffect to stop polling
       setIsTyping(false);
     }
   };
