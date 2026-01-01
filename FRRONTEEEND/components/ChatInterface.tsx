@@ -142,7 +142,9 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const newMessages = [...activeSession.messages, userMessage];
     updateSession(activeSessionId, newMessages);
     setInput('');
-    // DON'T set isTyping yet - wait until we have UUID from backend
+    
+    // Show loading indicator immediately (for UI feedback)
+    setIsTyping(true);
 
     try {
       
@@ -209,7 +211,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
       const data = await response.json();
       
-      // CRITICAL: Get UUID from backend FIRST, then start SSE
+      // Store UUID from backend to trigger SSE connection
       if (data.session_id && data.session_id !== activeSessionId) {
         console.log(`🔑 Session UUID from backend: ${data.session_id}`);
         
@@ -224,12 +226,9 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           setSessions(prev => [...prev.filter(s => s.id !== activeSessionId), migratedSession]);
         }
         
-        // Switch to the backend UUID session
+        // Switch to the backend UUID session - this triggers SSE connection
         setActiveSessionId(data.session_id);
       }
-      
-      // NOW start SSE - after we have the UUID
-      setIsTyping(true);
       
       let assistantContent = '';
       let reports: Array<{name: string, path: string}> = [];
