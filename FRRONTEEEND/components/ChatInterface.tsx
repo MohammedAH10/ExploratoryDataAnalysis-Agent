@@ -210,6 +210,13 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
       const data = await response.json();
       
+      // CRITICAL: Store the actual session UUID returned from backend for SSE routing
+      if (data.session_id) {
+        console.log(`🔑 Session UUID from backend: ${data.session_id}`);
+        // Update the active session to use this UUID for SSE connection
+        setActiveSessionId(data.session_id);
+      }
+      
       let assistantContent = '';
       let reports: Array<{name: string, path: string}> = [];
       let plots: Array<{title: string, url: string, type?: 'image' | 'html'}> = [];

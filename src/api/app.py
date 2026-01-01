@@ -349,9 +349,9 @@ async def run_analysis(
         # Set progress callback on existing agent
         agent.progress_callback = progress_callback
         
-        # Set HTTP session key for SSE streaming (so orchestrator emits to correct stream)
-        agent.http_session_key = session_key
-        print(f"[SSE] SET agent.http_session_key = {session_key}")
+        # Get the agent's actual session UUID for SSE routing
+        actual_session_id = agent.session.session_id if hasattr(agent, 'session') and agent.session else "default"
+        print(f"[SSE] Using agent session UUID: {actual_session_id}")
         
         try:
             # Agent's session memory should resolve file_path from context
@@ -468,9 +468,9 @@ async def run_analysis(
         # Set progress callback on existing agent
         agent.progress_callback = progress_callback
         
-        # Set HTTP session key for SSE streaming (so orchestrator emits to correct stream)
-        agent.http_session_key = session_key
-        print(f"[SSE] SET agent.http_session_key = {session_key} (file upload)")
+        # Get the agent's actual session UUID for SSE routing
+        actual_session_id = agent.session.session_id if hasattr(agent, 'session') and agent.session else "default"
+        print(f"[SSE] Using agent session UUID: {actual_session_id}")
         
         # Call existing agent logic
         logger.info(f"Starting analysis with task: {task_description}")
@@ -484,8 +484,8 @@ async def run_analysis(
         
         logger.info(f"Analysis completed: {result.get('status')}")
         
-        # Send completion event via SSE
-        progress_manager.emit(session_key, {
+        # Send completion event via SSE using actual session UUID
+        progress_manager.emit(actual_session_id, {
             "type": "analysis_complete",
             "status": result.get("status"),
             "message": "✅ Analysis completed successfully!"
@@ -512,13 +512,13 @@ async def run_analysis(
         
         serializable_result = make_json_serializable(result)
         
-        # Return result with progress tracking
+        # Return result with progress tracking and ACTUAL session UUID for SSE
         return JSONResponse(
             content={
                 "success": result.get("status") == "success",
                 "result": serializable_result,
                 "progress": progress_store.get(session_key, []),
-                "session_id": session_key,
+                "session_id": actual_session_id,  # Return UUID for SSE connection
                 "metadata": {
                     "filename": file.filename,
                     "task": task_description,
