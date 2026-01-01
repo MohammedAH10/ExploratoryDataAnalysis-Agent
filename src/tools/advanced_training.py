@@ -293,9 +293,11 @@ def hyperparameter_tuning(
         }
     
     # Save model if output path provided
+    actual_model_path = None
     if output_path:
         if ARTIFACT_STORE_AVAILABLE:
-            output_path = save_model_with_store(
+            # Save using artifact store (returns internal storage path)
+            actual_model_path = save_model_with_store(
                 model_data=final_model,
                 filename=os.path.basename(output_path),
                 metadata={
@@ -306,10 +308,15 @@ def hyperparameter_tuning(
                     "test_metrics": test_metrics
                 }
             )
+            # Also save to user-requested path for LLM to find it
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            joblib.dump(final_model, output_path)
+            print(f"💾 Model saved to: {output_path} (artifact store: {actual_model_path})")
         else:
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             joblib.dump(final_model, output_path)
-        print(f"💾 Model saved to: {output_path}")
+            actual_model_path = output_path
+            print(f"💾 Model saved to: {output_path}")
     
     return {
         'status': 'success',
@@ -512,9 +519,11 @@ def train_ensemble_models(
             }
         
         # Save for blending
+        actual_model_path = None
         if output_path:
             if ARTIFACT_STORE_AVAILABLE:
-                output_path = save_model_with_store(
+                # Save using artifact store (returns internal storage path)
+                actual_model_path = save_model_with_store(
                     model_data={
                         'base_models': dict(base_models),
                         'meta_model': meta_model,
@@ -528,6 +537,13 @@ def train_ensemble_models(
                         "num_base_models": len(base_models)
                     }
                 )
+                # Also save to user-requested path for LLM to find it
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                joblib.dump({
+                    'base_models': dict(base_models),
+                    'meta_model': meta_model,
+                    'ensemble_type': 'blending'
+                }, output_path)
             else:
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)
                 joblib.dump({
@@ -535,6 +551,7 @@ def train_ensemble_models(
                     'meta_model': meta_model,
                     'ensemble_type': 'blending'
                 }, output_path)
+                actual_model_path = output_path
         
         return {
             'status': 'success',
@@ -573,9 +590,11 @@ def train_ensemble_models(
         improvement = ensemble_metrics['r2'] - best_individual_metric
     
     # Save model
+    actual_model_path = None
     if output_path:
         if ARTIFACT_STORE_AVAILABLE:
-            output_path = save_model_with_store(
+            # Save using artifact store (returns internal storage path)
+            actual_model_path = save_model_with_store(
                 model_data=ensemble,
                 filename=os.path.basename(output_path),
                 metadata={
@@ -585,10 +604,15 @@ def train_ensemble_models(
                     "improvement_pct": float(improvement * 100)
                 }
             )
+            # Also save to user-requested path for LLM to find it
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            joblib.dump(ensemble, output_path)
+            print(f"💾 Ensemble model saved to: {output_path} (artifact store: {actual_model_path})")
         else:
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             joblib.dump(ensemble, output_path)
-        print(f"💾 Ensemble model saved to: {output_path}")
+            actual_model_path = output_path
+            print(f"💾 Ensemble model saved to: {output_path}")
     
     return {
         'status': 'success',
