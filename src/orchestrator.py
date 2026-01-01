@@ -406,6 +406,23 @@ class DataScienceCopilot:
             "create_binned_features": create_binned_features,
         }
     
+    def _extract_content_text(self, content) -> str:
+        """Extract text from message content (handles both string and list formats)"""
+        if content is None:
+            return None
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            # Content is list of objects like [{'type': 'text', 'text': '...'}]
+            text_parts = []
+            for item in content:
+                if isinstance(item, dict) and 'text' in item:
+                    text_parts.append(item['text'])
+                elif isinstance(item, str):
+                    text_parts.append(item)
+            return ''.join(text_parts)
+        return str(content)
+    
     def _build_system_prompt(self) -> str:
         """Build comprehensive system prompt for the copilot."""
         return """You are an autonomous Data Science Agent. You EXECUTE tasks, not advise.
@@ -2220,7 +2237,7 @@ You are a DOER. Complete workflows based on user intent."""
                         
                         response_message = response.choices[0].message
                         tool_calls = response_message.tool_calls
-                        final_content = response_message.content
+                        final_content = self._extract_content_text(response_message.content)
                         
                     except Exception as mistral_error:
                         error_str = str(mistral_error)
@@ -2250,7 +2267,7 @@ You are a DOER. Complete workflows based on user intent."""
                         
                         response_message = response.choices[0].message
                         tool_calls = response_message.tool_calls
-                        final_content = response_message.content
+                        final_content = self._extract_content_text(response_message.content)
                         
                     except Exception as groq_error:
                         # Check if it's a rate limit error (429)
@@ -2304,7 +2321,7 @@ You are a DOER. Complete workflows based on user intent."""
                             
                             response_message = response.choices[0].message
                             tool_calls = response_message.tool_calls
-                            final_content = response_message.content
+                            final_content = self._extract_content_text(response_message.content)
                         else:
                             # Not a rate limit error, re-raise
                             raise
