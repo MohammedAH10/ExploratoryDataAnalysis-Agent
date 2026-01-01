@@ -222,8 +222,7 @@ async def stream_progress(session_id: str):
             
             # Stream new events from the queue (poll with get_nowait to avoid blocking issues)
             while True:
-                try:
-                    # Try to get event without blocking
+                if not queue.empty():
                     event = queue.get_nowait()
                     print(f"[SSE] GOT event from queue: {event.get('type')}")
                     yield f"data: {json.dumps(event)}\n\n"
@@ -231,10 +230,10 @@ async def stream_progress(session_id: str):
                     # Check if analysis is complete
                     if event.get('type') == 'analysis_complete':
                         break
-                except asyncio.QueueEmpty:
+                else:
                     # No events available, send keepalive and wait
                     yield f": keepalive\n\n"
-                    await asyncio.sleep(0.1)  # Poll every 100ms
+                    await asyncio.sleep(0.5)  # Poll every 500ms
                     
         except asyncio.CancelledError:
             logger.info(f"SSE stream cancelled for session {session_id}")
