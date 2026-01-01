@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request, BackgroundTasks
 from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -276,6 +276,90 @@ class AnalysisRequest(BaseModel):
     target_col: Optional[str] = None
     use_cache: bool = True
     max_iterations: int = 20
+
+
+def run_analysis_background(file_path: str, task_description: str, target_col: Optional[str], 
+                            use_cache: bool, max_iterations: int, session_id: str):
+    """Background task to run analysis and emit events."""
+    try:
+        logger.info(f"[BACKGROUND] Starting analysis for session {session_id}")
+        
+        result = agent.analyze(
+            file_path=file_path,
+            task_description=task_description,
+            target_col=target_col,
+            use_cache=use_cache,
+            max_iterations=max_iterations
+        )
+        
+        logger.info(f"[BACKGROUND] Analysis completed for session {session_id}")
+        
+        # Send completion event
+        progress_manager.emit(session_id, {
+            "type": "analysis_complete",
+            "status": result.get("status"),
+            "message": "✅ Analysis completed successfully!",
+            "result": result
+        })
+        
+    except Exception as e:
+        logger.error(f"[BACKGROUND] Analysis failed for session {session_id}: {e}")
+        progress_manager.emit(session_id, {
+            "type": "analysis_failed",
+            "error": str(e),
+            "message": f"❌ Analysis failed: {str(e)}"
+        })
+
+
+@app.post("/run-async")
+async def run_analysis_async(
+    background_tasks: BackgroundTasks,
+    file: Optional[UploadFile] = File(None),
+    task_description: str = Form(...),
+    target_col: Optional[str] = Form(None),
+    use_cache: bool = Form(True),
+    max_iterations: int = Form(20)
+) -> JSONResponse:
+    """
+    Start analysis in background and return session UUID immediately.
+    Frontend can connect SSE with this UUID to receive real-time updates.
+    """
+    if agent is None:
+        raise HTTPException(status_code=503, detail="Agent not initialized")
+    
+    # Get session UUID immediately
+    session_id = agent.session.session_id if hasattr(agent, 'session') and agent.session else "default"
+    logger.info(f"[ASYNC] Created session: {session_id}")
+    
+    # Handle file upload
+    temp_file_path = None
+    if file:
+        temp_dir = Path("/tmp") / "data_science_agent"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_file_path = temp_dir / file.filename
+        
+        with open(temp_file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        logger.info(f"[ASYNC] File saved: {file.filename}")
+    
+    # Start background analysis
+    background_tasks.add_task(
+        run_analysis_background,
+        file_path=str(temp_file_path) if temp_file_path else "",
+        task_description=task_description,
+        target_col=target_col,
+        use_cache=use_cache,
+        max_iterations=max_iterations,
+        session_id=session_id
+    )
+    
+    # Return UUID immediately so frontend can connect SSE
+    return JSONResponse(content={
+        "session_id": session_id,
+        "status": "started",
+        "message": "Analysis started in background"
+    })
 
 
 @app.post("/run")

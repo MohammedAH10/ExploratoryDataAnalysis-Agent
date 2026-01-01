@@ -101,8 +101,13 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           // Optional: Display token budget updates
           console.log('💰 Token update:', data.message);
         } else if (data.type === 'analysis_complete') {
-          console.log('✅ Analysis completed');
-          setIsTyping(false);  // This will trigger cleanup
+          console.log('✅ Analysis completed', data.result);
+          setIsTyping(false);
+          
+          // Process the final result
+          if (data.result) {
+            processAnalysisResult(data.result);
+          }
         }
       } catch (err) {
         console.error('❌ Error parsing SSE event:', err, e.data);
@@ -127,6 +132,74 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       }
     };
   }, [activeSessionId]);
+
+  const processAnalysisResult = (result: any) => {
+    // Extract and display the analysis result from SSE
+    let assistantContent = '✅ Analysis Complete!\n\n';
+    let reports: Array<{name: string, path: string}> = [];
+    let plots: Array<{title: string, url: string, type?: 'image' | 'html'}> = [];
+    
+    // Extract plots and reports from workflow_history
+    if (result.workflow_history) {
+      const reportTools = ['generate_ydata_profiling_report', 'generate_plotly_dashboard', 'generate_all_plots'];
+      const plotTools = [
+        'generate_interactive_correlation_heatmap',
+        'generate_interactive_scatter',
+        'generate_interactive_histogram',
+        'generate_interactive_box_plots',
+        'generate_interactive_time_series',
+        'generate_eda_plots',
+        'generate_data_quality_plots',
+        'analyze_correlations'
+      ];
+      
+      result.workflow_history.forEach((step: any) => {
+        if (reportTools.includes(step.tool)) {
+          const reportPath = step.result?.output_path || step.result?.report_path || step.arguments?.output_path;
+          if (reportPath && (step.result?.success !== false)) {
+            reports.push({
+              name: step.tool.replace('generate_', '').replace(/_/g, ' ').trim(),
+              path: reportPath
+            });
+          }
+        }
+        
+        if (plotTools.includes(step.tool) && step.result?.plots) {
+          step.result.plots.forEach((plot: any) => {
+            plots.push({
+              title: plot.title || plot.type || 'Plot',
+              url: plot.url || plot.path,
+              type: plot.url?.endsWith('.html') ? 'html' : 'image'
+            });
+          });
+        }
+      });
+    }
+    
+    if (reports.length > 0) {
+      assistantContent += '📊 **Generated Reports:**\n';
+      reports.forEach(r => assistantContent += `- ${r.name}\n`);
+      assistantContent += '\n';
+    }
+    
+    if (plots.length > 0) {
+      assistantContent += `📈 **Generated ${plots.length} Visualizations**\n\n`;
+    }
+    
+    assistantContent += result.final_answer || 'Analysis complete. Check the generated artifacts.';
+    
+    // Add assistant message with result
+    const assistantMessage: Message = {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: assistantContent,
+      timestamp: new Date(),
+      reports,
+      plots
+    };
+    
+    updateSession(activeSessionId, [...activeSession.messages, assistantMessage]);
+  };
 
   const handleSend = async () => {
     if ((!input.trim() && !uploadedFile) || isTyping) return;
@@ -183,7 +256,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         formData.append('use_cache', 'true');
         formData.append('max_iterations', '20');
         
-        response = await fetch(`${API_URL}/run`, {
+        response = await fetch(`${API_URL}/run-async`, {
           method: 'POST',
           body: formData
         });
@@ -230,6 +303,14 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         setActiveSessionId(data.session_id);
       }
       
+      // For async endpoint, result comes via SSE analysis_complete event
+      // For now, just wait for SSE to deliver the result
+      if (data.status === 'started') {
+        console.log('🚀 Analysis started, waiting for SSE events...');
+        return; // Don't process result here, will come via SSE
+      }
+      
+      // Legacy sync endpoint handling (if data.result exists)
       let assistantContent = '';
       let reports: Array<{name: string, path: string}> = [];
       let plots: Array<{title: string, url: string, type?: 'image' | 'html'}> = [];
