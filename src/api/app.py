@@ -222,6 +222,7 @@ async def stream_progress(session_id: str):
             
             # Stream new events from the queue
             while True:
+                print(f"[SSE] ABOUT TO CALL queue.get() - queue size: {queue.qsize()}")
                 event = await queue.get()
                 print(f"[SSE] GOT event from queue: {event.get('type')}")
                 yield f"data: {json.dumps(event)}\n\n"
