@@ -294,14 +294,14 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       if (data.session_id) {
         console.log(`🔑 Session UUID from backend: ${data.session_id}`);
         
-        // Simply update the session ID - no migration needed
-        // The session already exists with id='1', just change its id to the UUID
-        setSessions(prev => prev.map(s => 
-          s.id === activeSessionId ? { ...s, id: data.session_id } : s
-        ));
+        const newSessionId = data.session_id;
         
-        // Switch to the backend UUID session - this triggers SSE connection
-        setActiveSessionId(data.session_id);
+        // CRITICAL: Update sessions first, then activeSessionId
+        // React 18 batches these updates automatically, preventing flicker
+        setSessions(prev => prev.map(s => 
+          s.id === activeSessionId ? { ...s, id: newSessionId } : s
+        ));
+        setActiveSessionId(newSessionId);
       }
       
       // For async endpoint, result comes via SSE analysis_complete event
@@ -728,7 +728,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               </motion.div>
             ))
           )}
-          {isTyping && activeSession.messages[activeSession.messages.length - 1]?.role === 'user' && (
+          {isTyping && (
              <div className="flex gap-4">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-white/5 border border-white/10">
                   <Bot className="w-4 h-4 text-indigo-400" />
