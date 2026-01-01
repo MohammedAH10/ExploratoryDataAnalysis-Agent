@@ -449,10 +449,11 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         content: errorMessage,
         timestamp: new Date()
       }]);
-    } finally {
-      // Setting isTyping to false will trigger useEffect to stop polling
+      
+      // On error, stop loading indicator
       setIsTyping(false);
     }
+    // NOTE: No finally block - isTyping is set to false by SSE analysis_complete event
   };
 
   const updateSession = (id: string, messages: Message[]) => {
