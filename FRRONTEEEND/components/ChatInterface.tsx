@@ -104,9 +104,9 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           console.log('✅ Analysis completed', data.result);
           setIsTyping(false);
           
-          // Process the final result
+          // Process the final result with the current session ID
           if (data.result) {
-            processAnalysisResult(data.result);
+            processAnalysisResult(data.result, activeSessionId);
           }
         }
       } catch (err) {
@@ -133,7 +133,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     };
   }, [activeSessionId]);
 
-  const processAnalysisResult = (result: any) => {
+  const processAnalysisResult = (result: any, sessionId: string) => {
     // Extract and display the analysis result from SSE
     let assistantContent = '✅ Analysis Complete!\n\n';
     let reports: Array<{name: string, path: string}> = [];
@@ -198,7 +198,13 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       plots
     };
     
-    updateSession(activeSessionId, [...activeSession.messages, assistantMessage]);
+    // Get current session and add message
+    setSessions(prev => prev.map(s => {
+      if (s.id === sessionId) {
+        return { ...s, messages: [...s.messages, assistantMessage], updatedAt: new Date() };
+      }
+      return s;
+    }));
   };
 
   const handleSend = async () => {
@@ -285,19 +291,14 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       const data = await response.json();
       
       // Store UUID from backend to trigger SSE connection
-      if (data.session_id && data.session_id !== activeSessionId) {
+      if (data.session_id) {
         console.log(`🔑 Session UUID from backend: ${data.session_id}`);
         
-        // Migrate existing session to use backend UUID
-        const currentSession = sessions.find(s => s.id === activeSessionId);
-        if (currentSession) {
-          // Create new session with backend UUID and copy existing messages
-          const migratedSession: ChatSession = {
-            ...currentSession,
-            id: data.session_id,
-          };
-          setSessions(prev => [...prev.filter(s => s.id !== activeSessionId), migratedSession]);
-        }
+        // Simply update the session ID - no migration needed
+        // The session already exists with id='1', just change its id to the UUID
+        setSessions(prev => prev.map(s => 
+          s.id === activeSessionId ? { ...s, id: data.session_id } : s
+        ));
         
         // Switch to the backend UUID session - this triggers SSE connection
         setActiveSessionId(data.session_id);
