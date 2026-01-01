@@ -54,13 +54,15 @@ class ProgressManager:
         if session_id in self._queues:
             print(f"[SSE] Found {len(self._queues[session_id])} subscribers for {session_id}")
             dead_queues = []
-            for queue in self._queues[session_id]:
+            for i, queue in enumerate(self._queues[session_id]):
                 try:
                     queue.put_nowait(event)
+                    print(f"[SSE] Successfully queued event to subscriber {i+1}")
                 except asyncio.QueueFull:
-                    # Queue is full, mark for removal
+                    print(f"[SSE] ERROR: Queue full for subscriber {i+1}")
                     dead_queues.append(queue)
-                except Exception:
+                except Exception as e:
+                    print(f"[SSE] ERROR: Exception queuing event to subscriber {i+1}: {type(e).__name__}: {e}")
                     dead_queues.append(queue)
             
             # Remove dead queues
