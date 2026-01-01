@@ -327,6 +327,9 @@ async def run_analysis(
         # Set progress callback on existing agent
         agent.progress_callback = progress_callback
         
+        # Set HTTP session key for SSE streaming (so orchestrator emits to correct stream)
+        agent.http_session_key = session_key
+        
         try:
             # Agent's session memory should resolve file_path from context
             result = agent.analyze(
@@ -441,6 +444,9 @@ async def run_analysis(
         
         # Set progress callback on existing agent
         agent.progress_callback = progress_callback
+        
+        # Set HTTP session key for SSE streaming (so orchestrator emits to correct stream)
+        agent.http_session_key = session_key
         
         # Call existing agent logic
         logger.info(f"Starting analysis with task: {task_description}")

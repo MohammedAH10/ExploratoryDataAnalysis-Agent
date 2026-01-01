@@ -165,6 +165,9 @@ class DataScienceCopilot:
         # Store progress callback
         self.progress_callback = progress_callback
         
+        # Store HTTP session key for SSE streaming (set by app.py)
+        self.http_session_key = None
+        
         # Determine provider
         self.provider = provider or os.getenv("LLM_PROVIDER", "mistral").lower()
         
@@ -2238,7 +2241,9 @@ You are a DOER. Complete workflows based on user intent."""
                             
                             # Emit token update for SSE streaming
                             if hasattr(self, 'session') and self.session:
-                                progress_manager.emit(self.session.session_id, {
+                                # Use HTTP session key if set, otherwise use internal session UUID
+                                session_key = getattr(self, 'http_session_key', None) or self.session.session_id
+                                progress_manager.emit(session_key, {
                                     'type': 'token_update',
                                     'message': f"📊 Tokens: {tokens_used} this call | {self.tokens_this_minute}/{self.tpm_limit} this minute",
                                     'tokens_used': tokens_used,
@@ -2278,7 +2283,9 @@ You are a DOER. Complete workflows based on user intent."""
                             
                             # Emit token update for SSE streaming
                             if hasattr(self, 'session') and self.session:
-                                progress_manager.emit(self.session.session_id, {
+                                # Use HTTP session key if set, otherwise use internal session UUID
+                                session_key = getattr(self, 'http_session_key', None) or self.session.session_id
+                                progress_manager.emit(session_key, {
                                     'type': 'token_update',
                                     'message': f"📊 Tokens: {tokens_used} this call | {self.tokens_this_minute}/{self.tpm_limit} this minute",
                                     'tokens_used': tokens_used,
@@ -2342,7 +2349,9 @@ You are a DOER. Complete workflows based on user intent."""
                                 
                                 # Emit token update for SSE streaming
                                 if hasattr(self, 'session') and self.session:
-                                    progress_manager.emit(self.session.session_id, {
+                                    # Use HTTP session key if set, otherwise use internal session UUID
+                                    session_key = getattr(self, 'http_session_key', None) or self.session.session_id
+                                    progress_manager.emit(session_key, {
                                         'type': 'token_update',
                                         'message': f"📊 Tokens: {tokens_used} this call | {self.tokens_this_minute}/{self.tpm_limit} this minute",
                                         'tokens_used': tokens_used,
@@ -3020,7 +3029,9 @@ You are a DOER. Complete workflows based on user intent."""
                     
                     # Emit progress event for SSE streaming
                     if hasattr(self, 'session') and self.session:
-                        progress_manager.emit(self.session.session_id, {
+                        # Use HTTP session key if set, otherwise use internal session UUID
+                        session_key = getattr(self, 'http_session_key', None) or self.session.session_id
+                        progress_manager.emit(session_key, {
                             'type': 'tool_executing',
                             'tool': tool_name,
                             'message': f"🔧 Executing: {tool_name}",
@@ -3040,7 +3051,9 @@ You are a DOER. Complete workflows based on user intent."""
                         
                         # Emit failure event for SSE streaming
                         if hasattr(self, 'session') and self.session:
-                            progress_manager.emit(self.session.session_id, {
+                            # Use HTTP session key if set, otherwise use internal session UUID
+                            session_key = getattr(self, 'http_session_key', None) or self.session.session_id
+                            progress_manager.emit(session_key, {
                                 'type': 'tool_failed',
                                 'tool': tool_name,
                                 'message': f"❌ FAILED: {tool_name}",
@@ -3114,7 +3127,9 @@ You are a DOER. Complete workflows based on user intent."""
                         
                         # Emit completion event for SSE streaming
                         if hasattr(self, 'session') and self.session:
-                            progress_manager.emit(self.session.session_id, {
+                            # Use HTTP session key if set, otherwise use internal session UUID
+                            session_key = getattr(self, 'http_session_key', None) or self.session.session_id
+                            progress_manager.emit(session_key, {
                                 'type': 'tool_completed',
                                 'tool': tool_name,
                                 'message': f"✓ Completed: {tool_name}"
