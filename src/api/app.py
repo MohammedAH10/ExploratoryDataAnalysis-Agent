@@ -195,6 +195,10 @@ async def stream_progress(session_id: str):
     print(f"[SSE] ENDPOINT: Client connected for session_id={session_id}")
     
     async def event_generator():
+        # CRITICAL: Subscribe FIRST to create queue before any events are emitted
+        subscription = progress_manager.subscribe(session_id)
+        queue_iterator = subscription.__aiter__()
+        
         try:
             # Send initial connection event
             connection_event = {
@@ -210,8 +214,11 @@ async def stream_progress(session_id: str):
             for event in history[-10:]:  # Send last 10 events
                 yield f"data: {json.dumps(event)}\n\n"
             
+            print(f"[SSE] Starting event stream loop for session {session_id}")
+            
             # Stream new events as they occur
-            async for event in progress_manager.subscribe(session_id):
+            while True:
+                event = await queue_iterator.__anext__()
                 print(f"[SSE] STREAMING event to client: {event.get('type')}")
                 yield f"data: {json.dumps(event)}\n\n"
                 
