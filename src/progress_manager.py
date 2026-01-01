@@ -36,6 +36,8 @@ class ProgressManager:
             session_id: Session identifier
             event: Event data (must include 'type' and 'message')
         """
+        print(f"📡 PROGRESS_MANAGER EMIT: session={session_id}, event_type={event.get('type')}, msg={event.get('message', '')[:50]}")
+        
         # Add timestamp
         event['timestamp'] = datetime.now().isoformat()
         
@@ -46,8 +48,11 @@ class ProgressManager:
         if len(self._history[session_id]) > 500:
             self._history[session_id] = self._history[session_id][-500:]
         
+        print(f"📝 History stored, total events for {session_id}: {len(self._history[session_id])}")
+        
         # Send to all active subscribers
         if session_id in self._queues:
+            print(f"✅ Found {len(self._queues[session_id])} subscribers for {session_id}")
             dead_queues = []
             for queue in self._queues[session_id]:
                 try:

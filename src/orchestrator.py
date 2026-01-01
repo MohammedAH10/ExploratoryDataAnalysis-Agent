@@ -3039,13 +3039,18 @@ You are a DOER. Complete workflows based on user intent."""
                     if not session_key_for_emit and hasattr(self, 'session') and self.session:
                         session_key_for_emit = self.session.session_id
                     
+                    print(f"🔍 DEBUG EMIT: http_session_key={getattr(self, 'http_session_key', 'NOT SET')}, session={hasattr(self, 'session')}, final_key={session_key_for_emit}")
+                    
                     if session_key_for_emit:
+                        print(f"🚀 EMITTING tool_executing for session: {session_key_for_emit}, tool: {tool_name}")
                         progress_manager.emit(session_key_for_emit, {
                             'type': 'tool_executing',
                             'tool': tool_name,
                             'message': f"🔧 Executing: {tool_name}",
                             'arguments': tool_args
                         })
+                    else:
+                        print(f"⚠️ SKIPPING EMIT: No session key available")
                     
                     # Execute tool
                     tool_result = self._execute_tool(tool_name, tool_args)
