@@ -2094,7 +2094,33 @@ You are a DOER. Complete workflows based on user intent."""
         """
         start_time = time.time()
         
+        # 🧠 RESOLVE AMBIGUITY USING SESSION MEMORY (BEFORE SCHEMA EXTRACTION)
+        # This ensures follow-up requests can find the file before we try to extract schema
+        original_file_path = file_path
+        original_target_col = target_col
+        
+        if self.session:
+            # Check if request has ambiguous references
+            resolved_params = self.session.resolve_ambiguity(task_description)
+            
+            # Use resolved params if user didn't specify
+            if not file_path or file_path == "":
+                if resolved_params.get("file_path"):
+                    file_path = resolved_params["file_path"]
+                    print(f"📝 Using dataset from session: {file_path}")
+            
+            if not target_col:
+                if resolved_params.get("target_col"):
+                    target_col = resolved_params["target_col"]
+                    print(f"📝 Using target column from session: {target_col}")
+            
+            # Show session context if available
+            if self.session.last_dataset or self.session.last_model:
+                context_summary = self.session.get_context_summary()
+                print(f"\n{context_summary}\n")
+        
         # 🚀 LOCAL SCHEMA EXTRACTION (NO LLM) - Extract metadata before any LLM calls
+        # Now that file_path is resolved from session if needed
         print("🔍 Extracting dataset schema locally (no LLM)...")
         schema_info = extract_schema_local(file_path, sample_rows=3)
         
@@ -2130,30 +2156,6 @@ You are a DOER. Complete workflows based on user intent."""
             print("🔧 Using compact prompt for small context window")
         else:
             system_prompt = self._build_system_prompt()
-        
-        # 🧠 RESOLVE AMBIGUITY USING SESSION MEMORY
-        original_file_path = file_path
-        original_target_col = target_col
-        
-        if self.session:
-            # Check if request has ambiguous references
-            resolved_params = self.session.resolve_ambiguity(task_description)
-            
-            # Use resolved params if user didn't specify
-            if not file_path or file_path == "":
-                if resolved_params.get("file_path"):
-                    file_path = resolved_params["file_path"]
-                    print(f"📝 Using dataset from session: {file_path}")
-            
-            if not target_col:
-                if resolved_params.get("target_col"):
-                    target_col = resolved_params["target_col"]
-                    print(f"📝 Using target column from session: {target_col}")
-            
-            # Show session context if available
-            if self.session.last_dataset or self.session.last_model:
-                context_summary = self.session.get_context_summary()
-                print(f"\n{context_summary}\n")
         
         # 🎯 PROACTIVE INTENT DETECTION - Tell LLM which tools to use BEFORE it tries wrong ones
         task_lower = task_description.lower()

@@ -48,6 +48,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [currentStep, setCurrentStep] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [reportModalUrl, setReportModalUrl] = useState<string | null>(null);
+  const [reportModalTitle, setReportModalTitle] = useState<string>('Visualization');
   const [showAssets, setShowAssets] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -702,7 +703,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         return (
                           <button
                             key={idx}
-                            onClick={() => setReportModalUrl(`${window.location.origin}${normalizedPath}`)}
+                            onClick={() => { setReportModalUrl(`${window.location.origin}${normalizedPath}`); setReportModalTitle(report.name || 'Report'); }}
                             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 text-indigo-200 text-xs font-medium transition-all group"
                           >
                             <Sparkles className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
@@ -722,7 +723,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                           {msg.plots.map((plot, idx) => (
                           <button
                             key={idx}
-                            onClick={() => setReportModalUrl(`${window.location.origin}${plot.url}`)}
+                            onClick={() => { setReportModalUrl(`${window.location.origin}${plot.url}`); setReportModalTitle(plot.title || 'Visualization'); }}
                             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-200 text-xs font-medium transition-all group"
                           >
                             <svg className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -896,7 +897,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                             return (
                               <button
                                 key={idx}
-                                onClick={() => setReportModalUrl(plotUrl || plot.url)}
+                                onClick={() => { setReportModalUrl(plotUrl || plot.url); setReportModalTitle(plot.title || 'Visualization'); }}
                                 className="w-full p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all text-left group"
                               >
                                 <div className="flex items-center justify-between">
@@ -1007,7 +1008,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                           {allReports.map((report, idx) => (
                             <button
                               key={idx}
-                              onClick={() => setReportModalUrl(report.path)}
+                              onClick={() => { setReportModalUrl(report.path); setReportModalTitle(report.name || 'Report'); }}
                               className="w-full p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-purple-500/10 hover:border-purple-500/30 transition-all text-left group"
                             >
                               <div className="flex items-center justify-between">
@@ -1044,7 +1045,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setReportModalUrl(null)}
+            onClick={() => { setReportModalUrl(null); setReportModalTitle('Visualization'); }}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -1054,9 +1055,9 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between p-4 border-b border-white/5">
-                <h3 className="text-lg font-semibold text-white">Data Profiling Report</h3>
+                <h3 className="text-lg font-semibold text-white">{reportModalTitle}</h3>
                 <button
-                  onClick={() => setReportModalUrl(null)}
+                  onClick={() => { setReportModalUrl(null); setReportModalTitle('Visualization'); }}
                   className="p-2 rounded-lg hover:bg-white/5 transition-colors"
                 >
                   <X className="w-5 h-5" />
