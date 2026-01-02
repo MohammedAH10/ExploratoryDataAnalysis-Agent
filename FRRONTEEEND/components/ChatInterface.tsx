@@ -53,6 +53,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const processedAnalysisRef = useRef<Set<string>>(new Set()); // Track processed analysis_complete events
   
   const activeSession = sessions.find(s => s.id === activeSessionId) || sessions[0];
 
@@ -116,9 +117,20 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           console.log('✅ Analysis completed', data.result);
           setIsTyping(false);
           
-          // Process the final result with the current session ID
-          if (data.result) {
-            processAnalysisResult(data.result, activeSessionId);
+          // Create a unique key for this analysis result to prevent duplicates
+          const resultKey = `${activeSessionId}-${data.result?.workflow_history?.length || 0}-${data.result?.plots?.length || 0}`;
+          
+          // Only process if we haven't seen this exact result before
+          if (!processedAnalysisRef.current.has(resultKey)) {
+            console.log('🆕 New analysis result, processing...', resultKey);
+            processedAnalysisRef.current.add(resultKey);
+            
+            // Process the final result with the current session ID
+            if (data.result) {
+              processAnalysisResult(data.result, activeSessionId);
+            }
+          } else {
+            console.log('⏭️ Skipping duplicate analysis result', resultKey);
           }
         }
       } catch (err) {
