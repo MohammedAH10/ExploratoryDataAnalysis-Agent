@@ -1093,13 +1093,19 @@ You are a DOER. Complete workflows based on user intent."""
             
             # === COLLECT REPORT FILES ===
             elif "report" in tool.lower() or "dashboard" in tool.lower():
+                print(f"[DEBUG] Report tool detected: {tool}")
+                print(f"[DEBUG] nested_result keys: {list(nested_result.keys())}")
                 if "output_path" in nested_result:
                     report_path = nested_result["output_path"]
+                    print(f"[DEBUG] Report output_path: {report_path}")
                     artifacts["reports"].append({
                         "name": tool.replace("_", " ").title(),
                         "path": report_path,
                         "url": f"/outputs/{report_path.replace('./outputs/', '')}"
                     })
+                    print(f"[DEBUG] Added to artifacts[reports], total reports: {len(artifacts['reports'])}")
+                else:
+                    print(f"[DEBUG] No output_path in nested_result for report tool")
             
             # === COLLECT VISUALIZATION FILES (interactive plots, charts, etc.) ===
             elif "plot" in tool.lower() or "visualiz" in tool.lower() or "chart" in tool.lower() or "heatmap" in tool.lower() or "scatter" in tool.lower() or "histogram" in tool.lower():
@@ -1402,6 +1408,7 @@ You are a DOER. Complete workflows based on user intent."""
         
         # 🔥 MERGE REPORTS INTO PLOTS ARRAY FOR FRONTEND DISPLAY
         # Frontend expects everything viewable in result.plots array
+        print(f"[DEBUG] Merging {len(artifacts['reports'])} reports into plots array")
         for report in artifacts["reports"]:
             plots.append({
                 "title": report["name"],
@@ -1409,6 +1416,8 @@ You are a DOER. Complete workflows based on user intent."""
                 "type": "html"  # Reports are typically HTML
             })
             print(f"[DEBUG] Added report to plots array: title='{report['name']}', url='{report['url']}'")
+        
+        print(f"[DEBUG] Final plots array length: {len(plots)}")
         
         return {
             "text": "\n".join(summary_lines),
