@@ -63,6 +63,14 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   }, [activeSession.messages, isTyping]);
 
+  // Clear uploaded file when switching sessions
+  useEffect(() => {
+    setUploadedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [activeSessionId]);
+
   // Connect to SSE when we receive a valid backend UUID
   useEffect(() => {
     // Only connect if we have a backend UUID (contains hyphens)
@@ -515,6 +523,12 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     };
     setSessions([newSession, ...sessions]);
     setActiveSessionId(newId);
+    
+    // Clear file upload state for new chat
+    setUploadedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const deleteSession = (e: React.MouseEvent, id: string) => {
