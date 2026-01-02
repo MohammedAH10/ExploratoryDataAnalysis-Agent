@@ -1095,9 +1095,10 @@ You are a DOER. Complete workflows based on user intent."""
             elif "report" in tool.lower() or "dashboard" in tool.lower():
                 print(f"[DEBUG] Report tool detected: {tool}")
                 print(f"[DEBUG] nested_result keys: {list(nested_result.keys())}")
-                if "output_path" in nested_result:
-                    report_path = nested_result["output_path"]
-                    print(f"[DEBUG] Report output_path: {report_path}")
+                # Check for both 'output_path' and 'report_path' keys
+                report_path = nested_result.get("output_path") or nested_result.get("report_path")
+                if report_path:
+                    print(f"[DEBUG] Report path found: {report_path}")
                     artifacts["reports"].append({
                         "name": tool.replace("_", " ").title(),
                         "path": report_path,
@@ -1105,7 +1106,7 @@ You are a DOER. Complete workflows based on user intent."""
                     })
                     print(f"[DEBUG] Added to artifacts[reports], total reports: {len(artifacts['reports'])}")
                 else:
-                    print(f"[DEBUG] No output_path in nested_result for report tool")
+                    print(f"[DEBUG] No output_path or report_path in nested_result for report tool")
             
             # === COLLECT VISUALIZATION FILES (interactive plots, charts, etc.) ===
             elif "plot" in tool.lower() or "visualiz" in tool.lower() or "chart" in tool.lower() or "heatmap" in tool.lower() or "scatter" in tool.lower() or "histogram" in tool.lower():
