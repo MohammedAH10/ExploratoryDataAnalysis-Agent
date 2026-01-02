@@ -1400,6 +1400,16 @@ You are a DOER. Complete workflows based on user intent."""
                 summary_lines.append(f"- {report['name']}")
             summary_lines.append("")
         
+        # 🔥 MERGE REPORTS INTO PLOTS ARRAY FOR FRONTEND DISPLAY
+        # Frontend expects everything viewable in result.plots array
+        for report in artifacts["reports"]:
+            plots.append({
+                "title": report["name"],
+                "url": report["url"],
+                "type": "html"  # Reports are typically HTML
+            })
+            print(f"[DEBUG] Added report to plots array: title='{report['name']}', url='{report['url']}'")
+        
         return {
             "text": "\n".join(summary_lines),
             "metrics": metrics,
