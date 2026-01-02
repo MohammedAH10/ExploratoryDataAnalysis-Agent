@@ -994,7 +994,17 @@ You are a DOER. Complete workflows based on user intent."""
                 continue
             
             # Extract nested result if present
+            # Tool results can be structured as:
+            # 1. Direct: {"output_path": "...", "status": "success"}
+            # 2. Nested: {"success": True, "result": {"output_path": "..."}}
             nested_result = result.get("result", result)
+            
+            # DEBUG: Log structure for visualization tools
+            if "plot" in tool.lower() or "heatmap" in tool.lower() or "visualiz" in tool.lower():
+                print(f"[DEBUG] Extracting plot from tool: {tool}")
+                print(f"[DEBUG]   result keys: {list(result.keys())}")
+                print(f"[DEBUG]   nested_result keys: {list(nested_result.keys()) if isinstance(nested_result, dict) else 'not a dict'}")
+                print(f"[DEBUG]   output_path in nested_result: {'output_path' in nested_result if isinstance(nested_result, dict) else False}")
             
             # === EXTRACT MODEL METRICS ===
             if tool == "train_baseline_models":
