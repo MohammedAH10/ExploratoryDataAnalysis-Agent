@@ -69,9 +69,20 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       return;
     }
 
-    // Don't reconnect if already connected to this session
+    // Check if we need a new connection for this session
+    // Close old connection if it exists and belongs to a different session or is closed
     if (eventSourceRef.current) {
-      return;
+      const currentSource = eventSourceRef.current;
+      // If readyState is CLOSED (2), we need a new connection
+      // If it's CONNECTING (0) or OPEN (1) for the same session, reuse it
+      if (currentSource.readyState === 2) {
+        console.log('🔄 Existing connection closed, creating new one');
+        currentSource.close();
+        eventSourceRef.current = null;
+      } else {
+        console.log('♻️ Reusing existing SSE connection');
+        return;
+      }
     }
 
     // Connect to SSE stream - will receive history + any new events
@@ -115,11 +126,11 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       }
     };
 
-    // Handle errors
+    // Handle errors - DON'T immediately close, just log
     eventSource.onerror = (err) => {
-      console.error('❌ SSE error:', err);
-      eventSource.close();
-      eventSourceRef.current = null;
+      console.error('❌ SSE connection error/closed:', err);
+      // Don't close here - let it reconnect naturally on next request
+      // The readyState check above will handle creating a new connection if needed
     };
 
     eventSourceRef.current = eventSource;
