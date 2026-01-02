@@ -117,8 +117,11 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           console.log('✅ Analysis completed', data.result);
           setIsTyping(false);
           
-          // Create a unique key for this analysis result to prevent duplicates
-          const resultKey = `${activeSessionId}-${data.result?.workflow_history?.length || 0}-${data.result?.plots?.length || 0}`;
+          // Create a unique key based on actual workflow content to prevent duplicates
+          // Use the last tool executed + summary hash for uniqueness
+          const lastTool = data.result?.workflow_history?.[data.result.workflow_history.length - 1]?.tool || 'unknown';
+          const summarySnippet = (data.result?.summary || '').substring(0, 50);
+          const resultKey = `${activeSessionId}-${lastTool}-${summarySnippet}`;
           
           // Only process if we haven't seen this exact result before
           if (!processedAnalysisRef.current.has(resultKey)) {
