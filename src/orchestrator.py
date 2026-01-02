@@ -2102,17 +2102,22 @@ You are a DOER. Complete workflows based on user intent."""
         if self.session:
             # Check if request has ambiguous references
             resolved_params = self.session.resolve_ambiguity(task_description)
+            print(f"[DEBUG] Orchestrator received resolved_params: {resolved_params}")
+            print(f"[DEBUG] Current file_path: '{file_path}', target_col: '{target_col}'")
             
             # Use resolved params if user didn't specify
             if not file_path or file_path == "":
                 if resolved_params.get("file_path"):
                     file_path = resolved_params["file_path"]
                     print(f"📝 Using dataset from session: {file_path}")
+                else:
+                    print(f"[DEBUG] No file_path in resolved_params")
             
             if not target_col:
                 if resolved_params.get("target_col"):
                     target_col = resolved_params["target_col"]
                     print(f"📝 Using target column from session: {target_col}")
+
             
             # Show session context if available
             if self.session.last_dataset or self.session.last_model:

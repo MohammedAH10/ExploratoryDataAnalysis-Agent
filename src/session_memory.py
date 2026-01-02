@@ -281,11 +281,15 @@ class SessionMemory:
         # Generic "use that" or "try it" commands
         if has_ambiguous_ref and not resolved:
             # Fallback: use last dataset and target
+            print(f"[DEBUG] Session fallback triggered - has_ambiguous_ref={has_ambiguous_ref}, resolved={resolved}")
             if self.last_dataset:
                 resolved["file_path"] = self.last_dataset
+                print(f"[DEBUG] Resolved file_path from session: {self.last_dataset}")
             if self.last_target_col:
                 resolved["target_col"] = self.last_target_col
+                print(f"[DEBUG] Resolved target_col from session: {self.last_target_col}")
         
+        print(f"[DEBUG] resolve_ambiguity returning: {resolved}")
         return resolved
     
     def _normalize_model_name(self, model_name: Optional[str]) -> Optional[str]:
