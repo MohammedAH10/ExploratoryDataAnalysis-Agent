@@ -139,7 +139,18 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     let reports: Array<{name: string, path: string}> = [];
     let plots: Array<{title: string, url: string, type?: 'image' | 'html'}> = [];
     
-    // Extract plots and reports from workflow_history
+    // PRIORITY 1: Extract plots from main result.plots array (backend enhanced summary)
+    if (result.plots && Array.isArray(result.plots)) {
+      result.plots.forEach((plot: any) => {
+        plots.push({
+          title: plot.title || 'Visualization',
+          url: plot.url || plot.path,
+          type: plot.type || (plot.url?.endsWith('.html') ? 'html' : 'image')
+        });
+      });
+    }
+    
+    // PRIORITY 2: Extract plots and reports from workflow_history (for backward compatibility)
     if (result.workflow_history) {
       const reportTools = ['generate_ydata_profiling_report', 'generate_plotly_dashboard', 'generate_all_plots'];
       const plotTools = [
@@ -164,13 +175,13 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           }
         }
         
-        if (plotTools.includes(step.tool) && step.result?.plots) {
-          step.result.plots.forEach((plot: any) => {
-            plots.push({
-              title: plot.title || plot.type || 'Plot',
-              url: plot.url || plot.path,
-              type: plot.url?.endsWith('.html') ? 'html' : 'image'
-            });
+        // Only extract from workflow if not already in result.plots
+        if (plotTools.includes(step.tool) && step.result?.result?.output_path && plots.length === 0) {
+          const outputPath = step.result.result.output_path;
+          plots.push({
+            title: step.tool.replace('generate_', '').replace('interactive_', '').replace(/_/g, ' ').trim(),
+            url: outputPath.startsWith('/') ? outputPath : `/outputs/${outputPath.replace('./outputs/', '')}`,
+            type: outputPath.endsWith('.html') ? 'html' : 'image'
           });
         }
       });
