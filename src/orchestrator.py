@@ -2623,8 +2623,28 @@ You are a DOER. Complete workflows based on user intent."""
                             # Look for valid tool name pattern at the end
                             match = re.search(r'([a-z_]+)[\"\']?\s*$', str(tool_name), re.IGNORECASE)
                             if match:
-                                tool_name = match.group(1)
-                                print(f"✓ Recovered tool name: {tool_name}")
+                                recovered_name = match.group(1)
+                                # Validate recovered tool name exists in registry
+                                if recovered_name in self.tool_functions:
+                                    tool_name = recovered_name
+                                    print(f"✓ Recovered tool name: {tool_name}")
+                                else:
+                                    print(f"❌ Recovered '{recovered_name}' but it's not a valid tool")
+                                    print(f"❌ Cannot recover tool name, skipping this tool call")
+                                    # CRITICAL: Add tool response to maintain conversation state for Mistral API
+                                    # Mistral requires messages to alternate: user -> assistant -> tool -> assistant
+                                    # Skipping without adding response breaks this pattern
+                                    messages.append({
+                                        "role": "tool",
+                                        "tool_call_id": tool_call_id,
+                                        "name": "invalid_tool",
+                                        "content": json.dumps({
+                                            "error": "Corrupted tool name detected",
+                                            "message": "The LLM returned invalid text instead of a tool call. Please try again with a valid tool.",
+                                            "hint": "Use the session context to continue from where you left off."
+                                        })
+                                    })
+                                    continue
                             else:
                                 print(f"❌ Cannot recover tool name, skipping this tool call")
                                 # CRITICAL: Add tool response to maintain conversation state for Mistral API
@@ -2636,7 +2656,8 @@ You are a DOER. Complete workflows based on user intent."""
                                     "name": "invalid_tool",
                                     "content": json.dumps({
                                         "error": "Corrupted tool name detected",
-                                        "message": "The LLM returned invalid text instead of a tool call. Please try again with a valid tool."
+                                        "message": "The LLM returned invalid text instead of a tool call. Please try again with a valid tool.",
+                                        "hint": "Use the session context to continue from where you left off."
                                     })
                                 })
                                 continue
