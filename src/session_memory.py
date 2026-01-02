@@ -289,6 +289,16 @@ class SessionMemory:
                 resolved["target_col"] = self.last_target_col
                 print(f"[DEBUG] Resolved target_col from session: {self.last_target_col}")
         
+        # 🔥 ULTIMATE FALLBACK: If no file_path resolved and we have session data, use it
+        # This handles cases where user doesn't use ambiguous refs but still wants to use session context
+        if not resolved.get("file_path") and self.last_dataset:
+            resolved["file_path"] = self.last_dataset
+            print(f"[DEBUG] Ultimate fallback: Using last_dataset from session: {self.last_dataset}")
+        
+        if not resolved.get("target_col") and self.last_target_col:
+            resolved["target_col"] = self.last_target_col
+            print(f"[DEBUG] Ultimate fallback: Using last_target_col from session: {self.last_target_col}")
+        
         print(f"[DEBUG] resolve_ambiguity returning: {resolved}")
         return resolved
     
