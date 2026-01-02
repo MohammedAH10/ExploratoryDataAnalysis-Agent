@@ -1005,6 +1005,8 @@ You are a DOER. Complete workflows based on user intent."""
                 print(f"[DEBUG]   result keys: {list(result.keys())}")
                 print(f"[DEBUG]   nested_result keys: {list(nested_result.keys()) if isinstance(nested_result, dict) else 'not a dict'}")
                 print(f"[DEBUG]   output_path in nested_result: {'output_path' in nested_result if isinstance(nested_result, dict) else False}")
+                if isinstance(nested_result, dict) and "output_path" in nested_result:
+                    print(f"[DEBUG]   output_path value: {nested_result['output_path']}")
             
             # === EXTRACT MODEL METRICS ===
             if tool == "train_baseline_models":
@@ -1114,6 +1116,10 @@ You are a DOER. Complete workflows based on user intent."""
                         "url": f"/outputs/{plot_path.replace('./outputs/', '')}",
                         "type": "html" if plot_path.endswith(".html") else "image"
                     })
+                    print(f"[DEBUG] Added plot to array:")
+                    print(f"[DEBUG]   title: {plot_title}")
+                    print(f"[DEBUG]   url: /outputs/{plot_path.replace('./outputs/', '')}")
+                    print(f"[DEBUG]   type: {'html' if plot_path.endswith('.html') else 'image'}")
             
             # === COLLECT PLOT FILES (from plot_paths key) ===
             if "plot_paths" in nested_result:
@@ -2576,6 +2582,12 @@ You are a DOER. Complete workflows based on user intent."""
                         artifacts_data = enhanced_summary.get("artifacts", {})
                         plots_data = enhanced_summary.get("plots", [])
                         print(f"✅ Enhanced summary generated with {len(plots_data)} plots, {len(metrics_data)} metrics")
+                        
+                        # DEBUG: Log plots array details
+                        if plots_data:
+                            print(f"[DEBUG] Plots array contains {len(plots_data)} items:")
+                            for idx, plot in enumerate(plots_data):
+                                print(f"[DEBUG]   Plot {idx+1}: title='{plot.get('title')}', url='{plot.get('url')}', type='{plot.get('type')}'")
                     except Exception as e:
                         print(f"⚠️  Enhanced summary generation failed: {e}")
                         import traceback
