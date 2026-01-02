@@ -23,6 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import asyncio
 import json
+import numpy as np
 
 # Import from parent package
 from src.orchestrator import DataScienceCopilot
@@ -31,6 +32,24 @@ from src.progress_manager import progress_manager
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# JSON serializer that handles numpy types
+def safe_json_dumps(obj):
+    """Convert object to JSON string, handling numpy types."""
+    def convert(o):
+        if isinstance(o, (np.integer, np.int64, np.int32)):
+            return int(o)
+        elif isinstance(o, (np.floating, np.float64, np.float32)):
+            return float(o)
+        elif isinstance(o, np.ndarray):
+            return o.tolist()
+        elif isinstance(o, dict):
+            return {k: convert(v) for k, v in o.items()}
+        elif isinstance(o, (list, tuple)):
+            return [convert(item) for item in o]
+        return o
+    
+    return json.dumps(convert(obj))
 
 # Initialize FastAPI
 app = FastAPI(
@@ -207,13 +226,13 @@ async def stream_progress(session_id: str):
                 'session_id': session_id
             }
             print(f"[SSE] SENDING connection event to client")
-            yield f"data: {json.dumps(connection_event)}\n\n"
+            yield f"data: {safe_json_dumps(connection_event)}\n\n"
             
             # Send any existing history first (for reconnections)
             history = progress_manager.get_history(session_id)
             print(f"[SSE] Sending {len(history[-10:])} history events")
             for event in history[-10:]:  # Send last 10 events
-                yield f"data: {json.dumps(event)}\n\n"
+                yield f"data: {safe_json_dumps(event)}\n\n"
             
             print(f"[SSE] Starting event stream loop for session {session_id}")
             
@@ -222,7 +241,7 @@ async def stream_progress(session_id: str):
                 if not queue.empty():
                     event = queue.get_nowait()
                     print(f"[SSE] GOT event from queue: {event.get('type')}")
-                    yield f"data: {json.dumps(event)}\n\n"
+                    yield f"data: {safe_json_dumps(event)}\n\n"
                     
                     # Check if analysis is complete
                     if event.get('type') == 'analysis_complete':
