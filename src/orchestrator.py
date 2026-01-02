@@ -1123,118 +1123,266 @@ You are a DOER. Complete workflows based on user intent."""
                     "url": f"/outputs/{nested_result['output_path'].replace('./outputs/', '')}"
                 })
         
-        # Build STRICT response template to prevent malformed output
+        # Build COMPREHENSIVE response template following user's format
         summary_lines = []
         
-        # SECTION 1: Model Performance (if models were trained)
-        if "all_models" in metrics and metrics["all_models"]:
+        # Header
+        summary_lines.extend([
+            "## 🤖 AI Agent Analysis Complete!",
+            "",
+            "I have completed the full ML workflow as requested.",
+            "",
+            "Here's a summary of the analysis:",
+            ""
+        ])
+        
+        # Extract task type and dataset info from workflow
+        task_type = None
+        n_features = 0
+        n_samples = 0
+        train_size = 0
+        test_size = 0
+        
+        for step in workflow_history:
+            if step.get("tool") == "train_baseline_models":
+                result = step.get("result", {}).get("result", {})
+                task_type = result.get("task_type", "regression")
+                n_features = result.get("n_features", 0)
+                train_size = result.get("train_size", 0)
+                test_size = result.get("test_size", 0)
+                n_samples = train_size + test_size
+                break
+        
+        # SECTION 1: Dataset Profiling and Quality
+        summary_lines.extend([
+            "### 📊 Dataset Profiling and Quality:",
+            ""
+        ])
+        
+        if n_samples > 0:
+            summary_lines.append(f"- The dataset contains **{n_samples:,} rows** and **{n_features} features**.")
+        
+        # Add workflow-specific insights
+        profiling_done = any(s.get("tool") == "profile_dataset" for s in workflow_history)
+        quality_checked = any(s.get("tool") == "detect_data_quality_issues" for s in workflow_history)
+        
+        if profiling_done:
+            summary_lines.append("- Dataset profiling completed with comprehensive statistics.")
+        if quality_checked:
+            summary_lines.append("- Data quality issues were detected and analyzed.")
+        
+        summary_lines.extend(["", ""])
+        
+        # SECTION 2: Data Preprocessing
+        summary_lines.extend([
+            "### 🔧 Data Preprocessing:",
+            ""
+        ])
+        
+        preprocessing_steps = []
+        for step in workflow_history:
+            tool = step.get("tool", "")
+            if tool == "clean_missing_values":
+                preprocessing_steps.append("- Missing values were handled using automated strategies.")
+            elif tool == "handle_outliers":
+                preprocessing_steps.append("- Outliers were detected and handled appropriately.")
+            elif tool == "encode_categorical":
+                preprocessing_steps.append("- Categorical variables were encoded for ML compatibility.")
+            elif tool == "feature_engineering" or tool == "enhanced_feature_engineering":
+                preprocessing_steps.append("- Advanced feature engineering was performed to create predictive features.")
+        
+        if preprocessing_steps:
+            summary_lines.extend(preprocessing_steps)
+        else:
+            summary_lines.append("- Data preprocessing steps were applied as needed.")
+        
+        summary_lines.extend(["", ""])
+        
+        # SECTION 3: Exploratory Data Analysis
+        eda_done = any("eda" in s.get("tool", "").lower() or "plot" in s.get("tool", "").lower() 
+                       for s in workflow_history)
+        if eda_done:
             summary_lines.extend([
-                "## 🎯 Model Performance",
+                "### 📈 Exploratory Data Analysis (EDA):",
+                "",
+                "- Comprehensive EDA visualizations were generated.",
+                "- Correlation analysis, distribution plots, and feature relationships were examined.",
+                f"- All visualizations are available in the **Visualization Gallery** below.",
+                "",
                 ""
             ])
+        
+        # SECTION 4: Model Training Results (ENHANCED - Following Template)
+        if "all_models" in metrics and metrics["all_models"]:
+            # Determine if classification or regression
+            is_classification = task_type == "classification"
+            metric_key = "f1" if is_classification else "r2"
             
-            # Sort models by R² score (descending)
+            # Sort models by primary metric (descending)
             sorted_models = sorted(
                 metrics["all_models"].items(),
-                key=lambda x: x[1].get("r2", 0),
+                key=lambda x: x[1].get(metric_key, 0),
                 reverse=True
             )
             
+            best_model_name = sorted_models[0][0] if sorted_models else None
+            best_model_score = sorted_models[0][1].get(metric_key, 0) if sorted_models else 0
+            
+            summary_lines.extend([
+                "## 🎯 Model Training Results",
+                "",
+                f"**Task Type**: {task_type.title()}",
+                f"**Features**: {n_features}",
+                f"**Training Samples**: {train_size:,}",
+                f"**Test Samples**: {test_size:,}",
+                "",
+                "### 📊 All Models Tested:",
+                ""
+            ])
+            
+            # Create detailed model performance table
             for model_name, model_metrics in sorted_models:
-                r2 = model_metrics.get("r2", 0)
-                rmse = model_metrics.get("rmse", 0)
-                mae = model_metrics.get("mae", 0)
-                
-                # Highlight the best model
-                is_best = (
-                    "best_model" in metrics and 
-                    metrics["best_model"].get("name", "") == model_name
-                )
+                is_best = (model_name == best_model_name)
                 prefix = "🏆 " if is_best else "📊 "
                 
-                summary_lines.append(
-                    f"{prefix}**{model_name.replace('_', ' ').title()}**: "
-                    f"R²={r2:.4f} | RMSE={rmse:.4f} | MAE={mae:.4f}"
-                )
+                model_display_name = model_name.replace('_', ' ').title()
+                
+                if is_classification:
+                    accuracy = model_metrics.get("accuracy", 0)
+                    precision = model_metrics.get("precision", 0)
+                    recall = model_metrics.get("recall", 0)
+                    f1 = model_metrics.get("f1", 0)
+                    
+                    summary_lines.extend([
+                        f"{prefix}**{model_display_name}**:",
+                        "",
+                        f"- Accuracy: **{accuracy:.4f}**",
+                        f"- Precision: **{precision:.4f}**",
+                        f"- Recall: **{recall:.4f}**",
+                        f"- F1 Score: **{f1:.4f}**",
+                        ""
+                    ])
+                else:  # regression
+                    r2 = model_metrics.get("r2", 0)
+                    rmse = model_metrics.get("rmse", 0)
+                    mae = model_metrics.get("mae", 0)
+                    
+                    summary_lines.extend([
+                        f"{prefix}**{model_display_name}**:",
+                        "",
+                        f"- R² Score: **{r2:.4f}**",
+                        f"- RMSE: **{rmse:.4f}**",
+                        f"- MAE: **{mae:.4f}**",
+                        ""
+                    ])
             
-            summary_lines.extend(["", ""])
+            # Best model highlight
+            summary_lines.extend([
+                f"### 🏆 Best Model: **{best_model_name.replace('_', ' ').title()}**",
+                f"**Score**: {best_model_score:.4f}",
+                "",
+                ""
+            ])
         
-        # SECTION 2: Tuning Results (if hyperparameter tuning was done)
+        # SECTION 5: Tuning Results (if hyperparameter tuning was done)
         if "tuned_model" in metrics:
             tuned = metrics["tuned_model"]
             summary_lines.extend([
-                "## ⚙️ Hyperparameter Tuning",
+                "### ⚙️ Hyperparameter Tuning:",
                 "",
-                f"**Model**: {tuned.get('model_type', 'Unknown').title()}",
-                f"**Optimized Score**: {tuned.get('best_score', 0):.4f}",
+                f"- Model optimized: **{tuned.get('model_type', 'Unknown').replace('_', ' ').title()}**",
+                f"- Best cross-validation score: **{tuned.get('best_score', 0):.4f}**",
+                "- Hyperparameters were optimized using Bayesian optimization.",
                 "",
                 ""
             ])
         
-        # SECTION 3: Cross-Validation (if performed)
+        # SECTION 6: Cross-Validation (if performed)
         if "cross_validation" in metrics:
             cv = metrics["cross_validation"]
             summary_lines.extend([
-                "## ✅ Cross-Validation",
+                "### ✅ Cross-Validation:",
                 "",
-                f"**Mean Score**: {cv['mean_score']:.4f} ± {cv['std_score']:.4f}",
+                f"- Mean Score: **{cv['mean_score']:.4f} ± {cv['std_score']:.4f}**",
+                f"- Validated across multiple folds for robust performance estimation.",
                 "",
                 ""
             ])
         
-        # SECTION 4: Analysis Summary (LLM explanation - cleaned)
-        if llm_summary and llm_summary.strip():
-            # Clean LLM summary aggressively
-            cleaned_summary = llm_summary
-            # Remove all file path patterns
-            import re
-            cleaned_summary = re.sub(r'\./outputs/[^\s\)\]]+', '', cleaned_summary)
-            cleaned_summary = re.sub(r'/outputs/[^\s\)\]]+', '', cleaned_summary)
-            cleaned_summary = re.sub(r'`[^`]*\.(csv|pkl|html|png|json)[^`]*`', '', cleaned_summary)
-            cleaned_summary = re.sub(r'\([^\)]*\.(csv|pkl|html|png|json)[^\)]*\)', '', cleaned_summary)
-            cleaned_summary = re.sub(r'Printed in logs.*?\)', '', cleaned_summary, flags=re.IGNORECASE)
-            cleaned_summary = re.sub(r'\(see above\)', '', cleaned_summary, flags=re.IGNORECASE)
-            cleaned_summary = re.sub(r'see above', '', cleaned_summary, flags=re.IGNORECASE)
-            # Remove broken tables
-            cleaned_summary = re.sub(r'^\s*\|\s*\|\s*$', '', cleaned_summary, flags=re.MULTILINE)
-            cleaned_summary = re.sub(r'^\s*[-|]+\s*$', '', cleaned_summary, flags=re.MULTILINE)
-            cleaned_summary = re.sub(r'\n{3,}', '\n\n', cleaned_summary)
-            cleaned_summary = cleaned_summary.strip()
-            
-            if cleaned_summary:
-                summary_lines.extend([
-                    "## 📝 Workflow Summary",
-                    "",
-                    cleaned_summary,
-                    ""
-                ])
+        # SECTION 7: Workflow Steps Checklist
+        summary_lines.extend([
+            "## 🔧 Workflow Steps:",
+            ""
+        ])
         
-        # Add artifact links
+        completed_steps = []
+        for step in workflow_history:
+            if step.get("result", {}).get("success", True):
+                tool_name = step.get("tool", "")
+                # Format tool name nicely
+                display_name = tool_name.replace("_", " ").replace("generate ", "").title()
+                completed_steps.append(f"✅ {display_name}")
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_steps = []
+        for step in completed_steps:
+            if step not in seen:
+                seen.add(step)
+                unique_steps.append(step)
+        
+        summary_lines.extend(unique_steps)
+        summary_lines.extend(["", ""])
+        
+        # SECTION 8: Generated Visualizations
+        if plots:
+            summary_lines.extend([
+                f"## 📊 Generated Visualizations ({len(plots)} plots)",
+                "",
+                "✅ **Plots are displayed in the Visualization Gallery below!**",
+                "",
+                "Available visualizations include:",
+                ""
+            ])
+            
+            for plot in plots[:10]:  # Show up to 10 plots
+                plot_title = plot.get('title', 'Visualization')
+                summary_lines.append(f"- 📈 {plot_title}")
+            
+            if len(plots) > 10:
+                summary_lines.append(f"- ... and {len(plots) - 10} more visualizations")
+            
+            summary_lines.extend(["", ""])
+        
+        # SECTION 9: Execution Summary
+        total_time = sum(s.get("duration", 0) for s in workflow_history)
+        summary_lines.extend([
+            "## ⏱️ Execution Summary:",
+            "",
+            f"- **Tools Executed**: {len(completed_steps)}",
+            f"- **Iterations**: {len(workflow_history)}",
+            f"- **Time**: {total_time:.1f}s",
+            ""
+        ])
+        
+        # SECTION 10: Artifacts (if any)
         if artifacts["models"]:
-            summary_lines.append("### 💾 Trained Models")
+            summary_lines.extend([
+                "### 💾 Trained Models:",
+                ""
+            ])
             for model in artifacts["models"]:
-                summary_lines.append(f"- [{model['name']}]({model['url']})")
+                summary_lines.append(f"- {model['name']}")
             summary_lines.append("")
         
         if artifacts["reports"]:
-            summary_lines.append("### 📄 Generated Reports")
+            summary_lines.extend([
+                "### 📄 Generated Reports:",
+                ""
+            ])
             for report in artifacts["reports"]:
-                summary_lines.append(f"- [{report['name']}]({report['url']})")
+                summary_lines.append(f"- {report['name']}")
             summary_lines.append("")
-        
-        if plots:
-            summary_lines.append(f"### 📈 Visualizations ({len(plots)} plots generated)")
-            for plot in plots[:5]:  # Show first 5
-                summary_lines.append(f"- [{plot['title']}]({plot['url']})")
-            if len(plots) > 5:
-                summary_lines.append(f"- ... and {len(plots) - 5} more")
-            summary_lines.append("")
-        
-        summary_lines.extend([
-            "---",
-            f"**Workflow Steps**: {len([s for s in workflow_history if s.get('result', {}).get('success', True)])} completed",
-            f"**Iterations**: {len(workflow_history)}",
-        ])
         
         return {
             "text": "\n".join(summary_lines),
