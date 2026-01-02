@@ -186,7 +186,9 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       assistantContent += `📈 **Generated ${plots.length} Visualizations**\n\n`;
     }
     
-    assistantContent += result.final_answer || 'Analysis complete. Check the generated artifacts.';
+    // Extract summary from backend (field changed from final_answer to summary)
+    const summaryText = result.summary || result.final_answer || 'Analysis complete. Check the generated artifacts.';
+    assistantContent += summaryText;
     
     // Add assistant message with result
     const assistantMessage: Message = {
