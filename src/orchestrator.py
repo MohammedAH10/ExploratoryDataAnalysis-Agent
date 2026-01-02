@@ -600,10 +600,13 @@ structure, variable relationships, and expected insights - not hardcoded domain 
 9. generate_eda_plots(encoded, target_col, output_dir="./outputs/plots/eda") - Generate EDA visualizations
 10. **ONLY IF USER EXPLICITLY REQUESTED ML**: train_baseline_models(encoded, target_col, task_type="auto")
 11. **HYPERPARAMETER TUNING (OPTIONAL - Smart Decision)**:
-    - IF user says "optimize", "tune", "improve", "best model possible" → ALWAYS tune
-    - IF best model score < 0.90 → Tune to improve (user expects good accuracy)
-    - IF best model score > 0.95 → Skip tuning (already excellent)
+    - ⚠️ **WARNING: This tool is VERY expensive and takes 5-10 minutes!**
+    - **When to use**:
+      * User explicitly says "optimize", "tune", "improve", "best model possible" → ALWAYS tune
+      * Best model score < 0.90 → Tune to improve (user expects good accuracy)
+      * Best model score > 0.95 → Skip tuning (already excellent)
     - **How**: hyperparameter_tuning(file_path=encoded, target_col=target_col, model_type="xgboost", n_trials=50)
+    - **Large datasets (>100K rows)**: n_trials automatically reduced to 20 to prevent timeout
     - **Only tune the WINNING model** (don't waste time on others)
     - **Map model names**: XGBoost→"xgboost", RandomForest→"random_forest", Ridge→"ridge", Lasso→use Ridge
     - **Note**: Time features should already be extracted in step 7 (create_time_features)

@@ -67,12 +67,15 @@ def hyperparameter_tuning(
     """
     Perform Bayesian hyperparameter optimization using Optuna.
     
+    ⚠️ WARNING: This tool is VERY computationally expensive and can take 5-10 minutes!
+    For large datasets (>100K rows), n_trials is automatically reduced to prevent timeout.
+    
     Args:
         file_path: Path to prepared dataset
         target_col: Target column name
         model_type: Model to tune ('random_forest', 'xgboost', 'logistic', 'ridge')
         task_type: 'classification', 'regression', or 'auto' (detect from target)
-        n_trials: Number of optimization trials
+        n_trials: Number of optimization trials (default 50, auto-reduced for large datasets)
         cv_folds: Number of cross-validation folds
         optimization_metric: Metric to optimize ('auto', 'accuracy', 'f1', 'roc_auc', 'rmse', 'r2')
         test_size: Test set size for final evaluation
@@ -86,6 +89,7 @@ def hyperparameter_tuning(
     n_trials = int(n_trials)
     cv_folds = int(cv_folds)
     random_state = int(random_state)
+    
     # Validation
     validate_file_exists(file_path)
     validate_file_format(file_path)
@@ -94,6 +98,17 @@ def hyperparameter_tuning(
     df = load_dataframe(file_path)
     validate_dataframe(df)
     validate_column_exists(df, target_col)
+    
+    # ⚠️ CRITICAL: Auto-reduce trials for large datasets to prevent memory crashes
+    n_rows = len(df)
+    if n_rows > 100000 and n_trials > 20:
+        original_trials = n_trials
+        n_trials = 20
+        print(f"   ⚠️ Large dataset ({n_rows:,} rows) - reducing trials from {original_trials} to {n_trials} to prevent timeout")
+    elif n_rows > 50000 and n_trials > 30:
+        original_trials = n_trials
+        n_trials = 30
+        print(f"   ⚠️ Medium dataset ({n_rows:,} rows) - reducing trials from {original_trials} to {n_trials}")
     
     # ⚠️ SKIP DATETIME CONVERSION: Already handled by create_time_features() in workflow step 7
     # The encoded.csv file should already have time features extracted
