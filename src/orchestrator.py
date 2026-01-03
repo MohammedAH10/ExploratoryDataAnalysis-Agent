@@ -2573,41 +2573,12 @@ You are a DOER. Complete workflows based on user intent."""
                         )
                         summary_text = enhanced_summary["text"]
                         
-                        # 🧹 POST-PROCESS: Aggressive cleanup of formatting
+                        # 🧹 POST-PROCESS: Light cleanup only
                         import re
                         
-                        # Remove ALL file path patterns
-                        summary_text = re.sub(r'\./outputs/[^\s\)\]]+', '', summary_text)
-                        summary_text = re.sub(r'/outputs/[^\s\)\]]+', '', summary_text)
-                        summary_text = re.sub(r'outputs/[^\s\)\]]+', '', summary_text)
-                        summary_text = re.sub(r'\[[^\]]*\.(csv|pkl|html|png|json)[^\]]*\]', '', summary_text)
-                        
-                        # Remove leftover file markers
-                        summary_text = re.sub(r'\[generated file\]', '', summary_text)
-                        summary_text = re.sub(r'\[see artifacts\]', '', summary_text)
-                        
-                        # Remove file path mentions
-                        summary_text = re.sub(r'saved to:?\s*[^\s\.]+', '', summary_text, flags=re.IGNORECASE)
-                        summary_text = re.sub(r'output file:?\s*[^\s\.]+', '', summary_text, flags=re.IGNORECASE)
-                        summary_text = re.sub(r'file path:?\s*[^\s\.]+', '', summary_text, flags=re.IGNORECASE)
-                        summary_text = re.sub(r'path:?\s*[^\s\.]+', '', summary_text, flags=re.IGNORECASE)
-                        summary_text = re.sub(r'directory:?\s*[^\s\.]+', '', summary_text, flags=re.IGNORECASE)
-                        
-                        # Remove backtick-wrapped paths and parenthetical paths
-                        summary_text = re.sub(r'`[^`]*\.(csv|pkl|html|png|json)[^`]*`', '', summary_text)
-                        summary_text = re.sub(r'\([^\)]*\.(csv|pkl|html|png|json)[^\)]*\)', '', summary_text)
-                        
-                        # Clean broken tables
-                        summary_text = re.sub(r'\|\s*\[[^\]]*\]\s*\|', '|', summary_text)
-                        summary_text = re.sub(r'\|\s*`[^`]*`\s*\|', '|', summary_text)
-                        summary_text = re.sub(r'\|\s*\|', '', summary_text)
-                        
-                        # Clean excessive whitespace
+                        # Clean excessive whitespace only
                         summary_text = re.sub(r'\n\n\n+', '\n\n', summary_text)
-                        summary_text = re.sub(r'[ \t]+', ' ', summary_text)  # Remove extra spaces
-                        
-                        # Remove code blocks that are just paths
-                        summary_text = re.sub(r'`\.?/?[\w\-/\.]*\.(csv|pkl|html|png|json)`', '', summary_text)
+                        summary_text = summary_text.strip()
                         
                         metrics_data = enhanced_summary.get("metrics", {})
                         artifacts_data = enhanced_summary.get("artifacts", {})
