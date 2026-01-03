@@ -1149,13 +1149,18 @@ You are a DOER. Complete workflows based on user intent."""
         # Build COMPREHENSIVE response template following user's format
         summary_lines = []
         
+        # Start with the LLM's actual reasoning/summary
+        if llm_summary and llm_summary.strip() and llm_summary != "Analysis completed":
+            summary_lines.extend([
+                llm_summary.strip(),
+                "",
+                "---",
+                ""
+            ])
+        
         # Header
         summary_lines.extend([
-            "## 🤖 AI Agent Analysis Complete!",
-            "",
-            "I have completed the full ML workflow as requested.",
-            "",
-            "Here's a summary of the analysis:",
+            "## 📋 Workflow Summary:",
             ""
         ])
         
