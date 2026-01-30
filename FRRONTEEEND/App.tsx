@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { HeroGeometric } from './components/HeroGeometric';
 import ProblemSolution from './components/ProblemSolution';
@@ -18,19 +17,18 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#030303] text-white selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-[#0a1628] text-white selection:bg-blue-400/30">
       {/* Navigation (Overlay) */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 py-4 backdrop-blur-md bg-[#030303]/20 border-b border-white/5">
+      <nav className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 py-4 backdrop-blur-md bg-[#0a1628]/20 border-b border-blue-400/10">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('landing')}>
           <Logo className="w-10 h-10" />
           <span className="font-bold tracking-tight text-lg hidden sm:block uppercase text-white">
-            DATA SCIENCE AGENT
+            EDA AGENT
           </span>
         </div>
-        
         <button 
           onClick={() => setView('chat')}
-          className="px-5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium transition-all"
+          className="px-5 py-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-400/20 rounded-lg text-sm font-medium transition-all"
         >
           Launch Console
         </button>
@@ -44,10 +42,10 @@ const App: React.FC = () => {
         
         {/* Transitional background paths section */}
         <BackgroundPaths 
-            title="Intelligence Without Limits" 
-            subtitle="The agent continuously learns from your specific domain, optimizing its own tools and reasoning strategies to solve your hardest data challenges."
+          title="Continuous Intelligence" 
+          subtitle="The agent learns from your domain, optimizing strategies to solve your data challenges."
         />
-
+        
         <Process />
       </main>
 

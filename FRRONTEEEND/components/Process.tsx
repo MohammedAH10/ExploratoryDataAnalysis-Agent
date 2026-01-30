@@ -1,63 +1,58 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 
 const steps = [
   {
     number: "01",
-    title: "Ingest Data",
-    description: "Upload your raw CSV, JSON, or Parquet files directly to the secure environment."
+    title: "Upload Data",
+    description: "Drop your CSV, Excel, or JSON files into the secure environment."
   },
   {
     number: "02",
-    title: "Define Objective",
-    description: "Describe what you want to achieve in natural language. 'Predict churn' or 'Find outliers'."
+    title: "Describe Goal",
+    description: "Tell the agent what you want to understand about your data in natural language."
   },
   {
     number: "03",
-    title: "Agent Execution",
-    description: "The agent orchestrates tools to clean, transform, and model your data autonomously."
-  },
-  {
-    number: "04",
-    title: "Receive Assets",
-    description: "Get fully trained models, performance metrics, and interactive explainable reports."
+    title: "Get Insights",
+    description: "Receive comprehensive reports with visualizations, statistics, and actionable findings."
   }
 ];
 
 const Process = () => {
   return (
-    <section id="process" className="py-24 bg-[#030303] border-y border-white/5">
+    <section id="process" className="py-24 bg-[#0a1628] border-y border-blue-400/10">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-20">
-          <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">How it Works</h2>
-          <p className="text-white/40 text-xl font-medium">From raw data to actionable intelligence in 4 steps.</p>
+          <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">How It Works</h2>
+          <p className="text-blue-100/60 text-xl font-medium">Upload data → Describe your goal → Get insights</p>
+          <p className="text-blue-100/50 text-lg mt-2">From CSVs to clear, explainable reports — fully automated.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-5xl mx-auto">
           {steps.map((step, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
+              transition={{ delay: i * 0.15 }}
               className="relative"
             >
-              <span className="text-7xl font-extrabold text-white/5 absolute -top-10 -left-4 select-none italic">
+              <span className="text-7xl font-extrabold text-blue-400/10 absolute -top-10 -left-4 select-none italic">
                 {step.number}
               </span>
               <div className="relative z-10">
                 <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2 tracking-tight">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
                   {step.title}
                 </h3>
-                <p className="text-white/40 leading-relaxed font-medium">
+                <p className="text-blue-100/60 leading-relaxed font-medium">
                   {step.description}
                 </p>
               </div>
               {i < steps.length - 1 && (
-                <div className="hidden lg:block absolute top-1/2 -right-6 w-12 h-[1px] bg-gradient-to-r from-white/10 to-transparent" />
+                <div className="hidden md:block absolute top-1/2 -right-6 w-12 h-[1px] bg-gradient-to-r from-blue-400/20 to-transparent" />
               )}
             </motion.div>
           ))}

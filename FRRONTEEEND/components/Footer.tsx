@@ -1,4 +1,3 @@
-
 import React, { useRef, useId, useEffect } from 'react';
 import { motion, animate, useMotionValue, AnimationPlaybackControls } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
@@ -49,9 +48,9 @@ const Footer = () => {
   }, [animationDuration, hueRotateMotionValue]);
 
   return (
-    <footer className="bg-[#030303] overflow-hidden">
+    <footer className="bg-[#0a1628] overflow-hidden">
       {/* High-Impact CTA with Atmospheric Shadow UI */}
-      <section className="relative w-full py-32 md:py-48 flex items-center justify-center border-t border-white/5">
+      <section className="relative w-full py-32 md:py-48 flex items-center justify-center border-t border-blue-400/10">
         <div
             className="absolute inset-0 pointer-events-none overflow-hidden"
             style={{
@@ -98,7 +97,7 @@ const Footer = () => {
             </svg>
             <div
                 style={{
-                    backgroundColor: 'rgba(99, 102, 241, 0.4)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.35)',
                     maskImage: `url('https://framerusercontent.com/images/ceBGguIpUU8luwByxuQz79t7To.png')`,
                     maskSize: "cover",
                     maskRepeat: "no-repeat",
@@ -130,12 +129,12 @@ const Footer = () => {
                 transition={{ duration: 0.8 }}
             >
                 <h2 className="text-4xl md:text-7xl font-extrabold text-white mb-8 tracking-tighter">
-                    Ready to automate your workflow?
+                    Ready to Explore Smarter?
                 </h2>
-                <p className="text-white/50 text-xl md:text-2xl mb-12 max-w-2xl mx-auto font-medium leading-relaxed">
-                    Build smarter ML workflows with AI autonomy. Join the next generation of data scientists.
+                <p className="text-blue-100/60 text-xl md:text-2xl mb-12 max-w-2xl mx-auto font-medium leading-relaxed">
+                    Stop wrestling with messy data. Start every project with instant understanding.
                 </p>
-                <button className="group relative px-10 py-5 bg-white text-black font-extrabold rounded-2xl transition-all hover:scale-105 active:scale-95 shadow-[0_0_50px_-12px_rgba(255,255,255,0.5)] flex items-center gap-3 mx-auto">
+                <button className="group relative px-10 py-5 bg-white text-[#0a1628] font-extrabold rounded-2xl transition-all hover:scale-105 active:scale-95 shadow-[0_0_50px_-12px_rgba(96,165,250,0.5)] flex items-center gap-3 mx-auto">
                     Get Started Now
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
@@ -143,21 +142,21 @@ const Footer = () => {
         </div>
 
         {/* Gradient fades to blend with rest of footer */}
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#030303] to-transparent z-10" />
-        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#030303] to-transparent z-10" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0a1628] to-transparent z-10" />
+        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#0a1628] to-transparent z-10" />
       </section>
 
       {/* Main Footer Links */}
       <div className="max-w-7xl mx-auto px-6 pb-20">
-        <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="pt-8 border-t border-blue-400/10 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-4">
             <Logo className="w-8 h-8" />
-            <span className="text-white font-extrabold tracking-tight uppercase">DATA SCIENCE AGENT</span>
+            <span className="text-white font-extrabold tracking-tight uppercase">EDA AGENT</span>
           </div>
-          <div className="text-white/30 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">
-            © 2025 Data Science Agent. Built for the autonomous future.
+          <div className="text-blue-100/40 text-[10px] sm:text-xs font-semibold uppercase tracking-wider">
+            © 2025 Exploratory Data Analysis Agent. Built for the autonomous data future.
           </div>
-          <div className="flex gap-8 text-white/40 text-sm font-bold italic">
+          <div className="flex gap-8 text-blue-100/50 text-sm font-bold italic">
             <a href="#" className="hover:text-white transition-colors">Twitter</a>
             <a href="#" className="hover:text-white transition-colors">GitHub</a>
             <a href="#" className="hover:text-white transition-colors">Docs</a>

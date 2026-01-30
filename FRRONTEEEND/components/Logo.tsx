@@ -18,75 +18,123 @@ export const Logo: React.FC<LogoProps> = ({ className, showText = false }) => {
       >
         <defs>
           <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#22d3ee" />
-            <stop offset="100%" stopColor="#6366f1" />
+            <stop offset="0%" stopColor="#60a5fa" />
+            <stop offset="50%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#1d4ed8" />
           </linearGradient>
-          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="2" result="blur" />
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
         </defs>
 
-        {/* Central Core */}
-        <circle cx="60" cy="60" r="6" fill="url(#logoGradient)" filter="url(#glow)" />
+        {/* Central Data Point */}
+        <circle cx="60" cy="60" r="8" fill="url(#logoGradient)" filter="url(#glow)" />
 
-        {/* Inner Circuit Ring */}
-        <circle cx="60" cy="60" r="18" stroke="url(#logoGradient)" strokeWidth="1" strokeDasharray="2 4" opacity="0.4" />
-        
-        {/* Complex Neural Paths (Stylized) */}
-        <g opacity="0.8">
-          {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
-            <g key={angle} transform={`rotate(${angle} 60 60)`}>
-              <path
-                d="M60 35 L60 30 M60 30 L55 25 M60 30 L65 25"
-                stroke="url(#logoGradient)"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-              <circle cx="55" cy="25" r="1.5" fill="url(#logoGradient)" />
-              <circle cx="65" cy="25" r="1.5" fill="url(#logoGradient)" />
-            </g>
+        {/* Data Points scattered for exploration theme */}
+        <g opacity="0.9">
+          {[
+            { cx: 30, cy: 35, r: 3 },
+            { cx: 45, cy: 25, r: 2.5 },
+            { cx: 75, cy: 30, r: 3.5 },
+            { cx: 90, cy: 40, r: 2.8 },
+            { cx: 25, cy: 65, r: 2.5 },
+            { cx: 85, cy: 75, r: 3.2 },
+            { cx: 40, cy: 85, r: 2.7 },
+            { cx: 70, cy: 90, r: 3 },
+          ].map((point, i) => (
+            <circle
+              key={i}
+              cx={point.cx}
+              cy={point.cy}
+              r={point.r}
+              fill="url(#logoGradient)"
+              opacity="0.7"
+            />
           ))}
         </g>
 
-        {/* Middle Dashed Ring */}
-        <circle cx="60" cy="60" r="32" stroke="url(#logoGradient)" strokeWidth="1.5" strokeDasharray="10 6" opacity="0.6" />
+        {/* Connection Lines (representing data relationships) */}
+        <g stroke="url(#logoGradient)" strokeWidth="1.5" opacity="0.4">
+          <line x1="60" y1="60" x2="30" y2="35" />
+          <line x1="60" y1="60" x2="75" y2="30" />
+          <line x1="60" y1="60" x2="90" y2="40" />
+          <line x1="60" y1="60" x2="25" y2="65" />
+          <line x1="60" y1="60" x2="85" y2="75" />
+          <line x1="60" y1="60" x2="40" y2="85" />
+          <line x1="30" y1="35" x2="45" y2="25" />
+          <line x1="75" y1="30" x2="90" y2="40" />
+          <line x1="85" y1="75" x2="70" y2="90" />
+        </g>
 
-        {/* Outer Orbital with Squares */}
-        <circle cx="60" cy="60" r="45" stroke="url(#logoGradient)" strokeWidth="0.5" opacity="0.3" />
-        {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle) => (
-          <rect
-            key={angle}
-            x="58"
-            y="12"
-            width="4"
-            height="4"
-            fill="url(#logoGradient)"
-            transform={`rotate(${angle} 60 60)`}
-            rx="1"
-          />
-        ))}
+        {/* Circular scanning rings */}
+        <circle
+          cx="60"
+          cy="60"
+          r="25"
+          stroke="url(#logoGradient)"
+          strokeWidth="1"
+          strokeDasharray="4 6"
+          opacity="0.5"
+        />
+        <circle
+          cx="60"
+          cy="60"
+          r="40"
+          stroke="url(#logoGradient)"
+          strokeWidth="0.8"
+          strokeDasharray="8 4"
+          opacity="0.3"
+        />
 
-        {/* Connection Spokes */}
-        {[0, 90, 180, 270].map((angle) => (
-          <line
-            key={angle}
-            x1="60"
-            y1="16"
-            x2="60"
-            y2="30"
-            stroke="url(#logoGradient)"
-            strokeWidth="1"
-            opacity="0.5"
-            transform={`rotate(${angle} 60 60)`}
-          />
+        {/* Outer Frame */}
+        <rect
+          x="10"
+          y="10"
+          width="100"
+          height="100"
+          stroke="url(#logoGradient)"
+          strokeWidth="1.5"
+          rx="8"
+          opacity="0.25"
+        />
+
+        {/* Corner accents */}
+        {[
+          { x: 10, y: 10 },
+          { x: 102, y: 10 },
+          { x: 10, y: 102 },
+          { x: 102, y: 102 },
+        ].map((corner, i) => (
+          <g key={i}>
+            <line
+              x1={corner.x}
+              y1={corner.y}
+              x2={corner.x + (i % 2 === 0 ? 8 : -8)}
+              y2={corner.y}
+              stroke="url(#logoGradient)"
+              strokeWidth="2"
+              opacity="0.6"
+            />
+            <line
+              x1={corner.x}
+              y1={corner.y}
+              x2={corner.x}
+              y2={corner.y + (i < 2 ? 8 : -8)}
+              stroke="url(#logoGradient)"
+              strokeWidth="2"
+              opacity="0.6"
+            />
+          </g>
         ))}
       </svg>
       {showText && (
         <span className="mt-2 text-white font-extrabold tracking-widest text-[10px] sm:text-xs uppercase">
-          DATA SCIENCE AGENT
+          EDA AGENT
         </span>
       )}
     </div>
   );
 };
+
+

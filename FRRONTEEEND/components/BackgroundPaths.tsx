@@ -1,4 +1,3 @@
-
 import React from "react";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
@@ -14,14 +13,14 @@ function FloatingPaths({ position }: { position: number }) {
         } ${343 - i * 6}C${616 - i * 5 * position} ${470 - i * 6} ${
             684 - i * 5 * position
         } ${875 - i * 6} ${684 - i * 5 * position} ${875 - i * 6}`,
-        color: `rgba(99,102,241,${0.05 + i * 0.01})`, // Using indigo-500 tint
+        color: `rgba(59,130,246,${0.05 + i * 0.01})`,
         width: 0.5 + i * 0.03,
     }));
 
     return (
         <div className="absolute inset-0 pointer-events-none">
             <svg
-                className="w-full h-full text-indigo-500/20"
+                className="w-full h-full text-blue-400/20"
                 viewBox="0 0 696 316"
                 fill="none"
             >
@@ -52,8 +51,8 @@ function FloatingPaths({ position }: { position: number }) {
 }
 
 export function BackgroundPaths({
-    title = "The Future is Autonomous",
-    subtitle = "Scale your data engineering and predictive modeling beyond human limits.",
+    title = "Continuous Intelligence",
+    subtitle = "The agent learns from your domain, optimizing strategies to solve your data challenges.",
 }: {
     title?: string;
     subtitle?: string;
@@ -61,7 +60,7 @@ export function BackgroundPaths({
     const words = title.split(" ");
 
     return (
-        <section className="relative min-h-[80vh] w-full flex items-center justify-center overflow-hidden bg-[#030303]">
+        <section className="relative min-h-[80vh] w-full flex items-center justify-center overflow-hidden bg-[#0a1628]">
             <div className="absolute inset-0">
                 <FloatingPaths position={1} />
                 <FloatingPaths position={-1} />
@@ -95,7 +94,7 @@ export function BackgroundPaths({
                                             damping: 25,
                                         }}
                                         className="inline-block text-transparent bg-clip-text 
-                                        bg-gradient-to-r from-white via-white/90 to-white/70"
+                                        bg-gradient-to-r from-white via-blue-100/90 to-blue-200/70"
                                     >
                                         {letter}
                                     </motion.span>
@@ -109,7 +108,7 @@ export function BackgroundPaths({
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ delay: 0.5 }}
-                        className="text-white/40 text-xl font-medium mb-12 max-w-2xl mx-auto tracking-tight"
+                        className="text-blue-100/50 text-xl font-medium mb-12 max-w-2xl mx-auto tracking-tight"
                     >
                         {subtitle}
                     </motion.p>
@@ -119,18 +118,18 @@ export function BackgroundPaths({
                         whileInView={{ opacity: 1, scale: 1 }}
                         viewport={{ once: true }}
                         transition={{ delay: 0.8 }}
-                        className="inline-block group relative bg-gradient-to-b from-white/10 to-indigo-500/10 
+                        className="inline-block group relative bg-gradient-to-b from-blue-400/10 to-blue-600/10 
                         p-px rounded-2xl backdrop-blur-lg 
-                        overflow-hidden shadow-lg hover:shadow-indigo-500/20 transition-all duration-300"
+                        overflow-hidden shadow-lg hover:shadow-blue-500/20 transition-all duration-300"
                     >
                         <button
                             className="rounded-[1.15rem] px-10 py-5 text-lg font-bold backdrop-blur-md 
-                            bg-white/95 hover:bg-white text-black transition-all duration-300 
-                            group-hover:-translate-y-0.5 border border-white/10
+                            bg-white/95 hover:bg-white text-[#0a1628] transition-all duration-300 
+                            group-hover:-translate-y-0.5 border border-blue-400/10
                             flex items-center gap-3"
                         >
                             <span className="opacity-90 group-hover:opacity-100 transition-opacity">
-                                Deploy Your First Agent
+                                Start Exploring
                             </span>
                             <ArrowRight
                                 className="w-5 h-5 opacity-70 group-hover:opacity-100 group-hover:translate-x-1.5 
@@ -142,7 +141,7 @@ export function BackgroundPaths({
             </div>
             
             {/* Subtle glow effect at the bottom */}
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent shadow-[0_0_50px_2px_rgba(99,102,241,0.2)]" />
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-blue-400/50 to-transparent shadow-[0_0_50px_2px_rgba(59,130,246,0.2)]" />
         </section>
     );
 }

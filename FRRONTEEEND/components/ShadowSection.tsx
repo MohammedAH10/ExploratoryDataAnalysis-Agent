@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useRef, useId, useEffect, CSSProperties } from 'react';
@@ -60,13 +59,13 @@ const useInstanceId = (): string => {
 
 export function ShadowSection({
     sizing = 'fill',
-    color = 'rgba(99, 102, 241, 0.6)',
+    color = 'rgba(59, 130, 246, 0.5)',
     animation = { scale: 50, speed: 15 },
     noise = { opacity: 0.1, scale: 0.5 },
     style,
     className,
-    title = "Cognitive Core",
-    description = "The unseen intelligence powering your most critical decisions."
+    title = "Data Intelligence",
+    description = "Uncover patterns and insights hidden in your data."
 }: ShadowOverlayProps) {
     const id = useInstanceId();
     const animationEnabled = animation && animation.scale > 0;
@@ -107,7 +106,7 @@ export function ShadowSection({
 
     return (
         <section
-            className={cn("relative w-full h-[70vh] min-h-[500px] overflow-hidden bg-[#030303]", className)}
+            className={cn("relative w-full h-[70vh] min-h-[500px] overflow-hidden bg-[#0a1628]", className)}
             style={style}
         >
             <div
@@ -194,7 +193,7 @@ export function ShadowSection({
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.2 }}
-                    className="text-white/60 text-lg md:text-xl font-sans max-w-xl mx-auto"
+                    className="text-blue-100/60 text-lg md:text-xl font-sans max-w-xl mx-auto"
                 >
                     {description}
                 </motion.p>
@@ -215,8 +214,8 @@ export function ShadowSection({
             )}
             
             {/* Bottom Vignette */}
-            <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#030303] to-transparent z-30" />
-            <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#030303] to-transparent z-30" />
+            <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0a1628] to-transparent z-30" />
+            <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#0a1628] to-transparent z-30" />
         </section>
     );
 }

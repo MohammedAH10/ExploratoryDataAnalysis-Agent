@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Plus, Search, Settings, MoreHorizontal, User, Bot, ArrowLeft, Paperclip, Sparkles, Trash2, X, Upload, Package, FileText, BarChart3, ChevronRight } from 'lucide-react';
@@ -562,9 +561,9 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#050505] overflow-hidden text-white/90">
+    <div className="flex h-screen w-full bg-[#0a1628] overflow-hidden text-white/90">
       {/* Sidebar */}
-      <aside className="w-[280px] hidden md:flex flex-col border-r border-white/5 bg-[#0a0a0a]/50 backdrop-blur-xl">
+      <aside className="w-[280px] hidden md:flex flex-col border-r border-blue-400/10 bg-[#0a1628]/50 backdrop-blur-xl">
         <div className="p-4 flex flex-col h-full">
           <div className="flex items-center gap-3 mb-8 px-2">
             <Logo className="w-8 h-8" />
@@ -573,14 +572,14 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
           <button 
             onClick={createNewChat}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-sm font-medium mb-6 group"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-500/10 hover:bg-blue-500/15 border border-blue-400/15 transition-all text-sm font-medium mb-6 group"
           >
             <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
             New Conversation
           </button>
 
           <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
-            <p className="px-3 text-[10px] uppercase tracking-widest text-white/30 font-bold mb-2">History</p>
+            <p className="px-3 text-[10px] uppercase tracking-widest text-blue-100/30 font-bold mb-2">History</p>
             {sessions.map(session => (
               <div
                 key={session.id}
@@ -588,8 +587,8 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 className={cn(
                   "group flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-all text-sm",
                   activeSessionId === session.id 
-                    ? "bg-white/10 text-white border border-white/10 shadow-lg" 
-                    : "text-white/40 hover:text-white/70 hover:bg-white/5"
+                    ? "bg-blue-500/15 text-white border border-blue-400/15 shadow-lg" 
+                    : "text-blue-100/40 hover:text-white/70 hover:bg-blue-500/10"
                 )}
               >
                 <span className="truncate flex-1 pr-2">{session.title}</span>
@@ -601,15 +600,15 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             ))}
           </div>
 
-          <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between px-2">
-            <button onClick={onBack} className="p-2 hover:bg-white/5 rounded-lg transition-colors text-white/40 hover:text-white">
+          <div className="mt-auto pt-4 border-t border-blue-400/10 flex items-center justify-between px-2">
+            <button onClick={onBack} className="p-2 hover:bg-blue-500/10 rounded-lg transition-colors text-blue-100/40 hover:text-white">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="flex gap-2">
-              <button className="p-2 hover:bg-white/5 rounded-lg transition-colors text-white/40 hover:text-white">
+              <button className="p-2 hover:bg-blue-500/10 rounded-lg transition-colors text-blue-100/40 hover:text-white">
                 <Settings className="w-5 h-5" />
               </button>
-              <button className="p-2 hover:bg-white/5 rounded-lg transition-colors text-white/40 hover:text-white">
+              <button className="p-2 hover:bg-blue-500/10 rounded-lg transition-colors text-blue-100/40 hover:text-white">
                 <User className="w-5 h-5" />
               </button>
             </div>
@@ -620,14 +619,14 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       {/* Main Chat Area */}
       <main className="flex-1 flex flex-col relative bg-gradient-to-b from-[#080808] to-[#050505]">
         {/* Top Header */}
-        <header className="h-16 flex items-center justify-between px-6 border-b border-white/5 backdrop-blur-md bg-black/20 sticky top-0 z-10">
+        <header className="h-16 flex items-center justify-between px-6 border-b border-blue-400/10 backdrop-blur-md bg-black/20 sticky top-0 z-10">
           <div className="flex items-center gap-4">
-             <button onClick={onBack} className="md:hidden p-2 hover:bg-white/5 rounded-lg">
+             <button onClick={onBack} className="md:hidden p-2 hover:bg-blue-500/10 rounded-lg">
                <ArrowLeft className="w-5 h-5" />
              </button>
              <div>
                <h2 className="text-sm font-bold text-white tracking-tight">{activeSession.title}</h2>
-               <p className="text-[10px] text-white/30 font-medium">{activeSession.messages.length} messages in session</p>
+               <p className="text-[10px] text-blue-100/30 font-medium">{activeSession.messages.length} messages in session</p>
              </div>
           </div>
           <div className="flex items-center gap-3">
@@ -635,15 +634,15 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               onClick={() => setShowAssets(!showAssets)}
               className={cn(
                 "p-2 transition-colors rounded-lg",
-                showAssets ? "text-emerald-400 bg-emerald-500/10" : "text-white/40 hover:text-white"
+                showAssets ? "text-emerald-400 bg-emerald-500/10" : "text-blue-100/40 hover:text-white"
               )}
             >
               <Package className="w-5 h-5" />
             </button>
-            <button className="p-2 text-white/40 hover:text-white transition-colors">
+            <button className="p-2 text-blue-100/40 hover:text-white transition-colors">
               <Search className="w-5 h-5" />
             </button>
-            <button className="p-2 text-white/40 hover:text-white transition-colors">
+            <button className="p-2 text-blue-100/40 hover:text-white transition-colors">
               <MoreHorizontal className="w-5 h-5" />
             </button>
           </div>
@@ -659,26 +658,25 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                <motion.div 
                  initial={{ opacity: 0, scale: 0.9 }}
                  animate={{ opacity: 1, scale: 1 }}
-                 className="w-16 h-16 bg-gradient-to-br from-indigo-500/20 to-rose-500/20 rounded-2xl flex items-center justify-center mb-6 border border-white/10"
+                 className="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-blue-700/20 rounded-2xl flex items-center justify-center mb-6 border border-blue-400/15"
                >
-                 <Sparkles className="w-8 h-8 text-indigo-400" />
+                 <Sparkles className="w-8 h-8 text-blue-400" />
                </motion.div>
-               <h1 className="text-2xl font-extrabold text-white mb-3">Welcome, Data Scientist</h1>
-               <p className="text-white/40 max-w-sm leading-relaxed text-sm">
-                 I'm your autonomous agent ready to profile data, train models, or build dashboards. 
-                 Try uploading a dataset or describing your ML objective.
+               <h1 className="text-2xl font-extrabold text-white mb-3">Welcome to EDA Agent</h1>
+               <p className="text-blue-100/40 max-w-sm leading-relaxed text-sm">
+                 I'm your autonomous agent for exploratory data analysis. Upload a dataset and I'll automatically profile, visualize, and uncover insights for you.
                </p>
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-8 w-full max-w-lg">
                   {[
-                    "Profile my sales.csv",
-                    "Train a XGBoost classifier",
-                    "Generate a correlation heatmap",
-                    "Explain feature importance"
+                    "Profile my dataset",
+                    "Find outliers and anomalies",
+                    "Show correlations",
+                    "Analyze missing values"
                   ].map(prompt => (
                     <button 
                       key={prompt}
                       onClick={() => setInput(prompt)}
-                      className="text-left px-4 py-3 rounded-xl bg-white/[0.03] border border-white/5 hover:bg-white/5 transition-all text-xs text-white/60 hover:text-white"
+                      className="text-left px-4 py-3 rounded-xl bg-white/[0.03] border border-blue-400/10 hover:bg-blue-500/10 transition-all text-xs text-blue-100/60 hover:text-white"
                     >
                       "{prompt}"
                     </button>
@@ -697,27 +695,27 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 )}
               >
                 <div className={cn(
-                  "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border border-white/10",
-                  msg.role === 'user' ? "bg-indigo-500/20" : "bg-white/5"
+                  "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border border-blue-400/15",
+                  msg.role === 'user' ? "bg-blue-500/20" : "bg-blue-500/10"
                 )}>
-                  {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4 text-indigo-400" />}
+                  {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4 text-blue-400" />}
                 </div>
                 <div className={cn(
                   "max-w-[80%] md:max-w-[70%] p-4 rounded-2xl text-sm leading-relaxed",
                   msg.role === 'user' 
-                    ? "bg-indigo-600/20 text-indigo-50 border border-indigo-500/20" 
-                    : "bg-white/[0.03] text-white/80 border border-white/5"
+                    ? "bg-indigo-600/20 text-indigo-50 border border-blue-500/20" 
+                    : "bg-white/[0.03] text-white/80 border border-blue-400/10"
                 )}>
                   {msg.file && (
-                    <div className="mb-2 flex items-center gap-2 text-xs bg-white/5 rounded-lg px-3 py-2 border border-white/10">
+                    <div className="mb-2 flex items-center gap-2 text-xs bg-blue-500/10 rounded-lg px-3 py-2 border border-blue-400/15">
                       <Paperclip className="w-3 h-3" />
                       <span className="font-medium">{msg.file.name}</span>
-                      <span className="text-white/40">({(msg.file.size / 1024).toFixed(1)} KB)</span>
+                      <span className="text-blue-100/40">({(msg.file.size / 1024).toFixed(1)} KB)</span>
                     </div>
                   )}
                   {msg.role === 'assistant' ? (
                     <ReactMarkdown 
-                      className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/10 prose-headings:text-white prose-strong:text-white prose-li:text-white/80"
+                      className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-black/40 prose-pre:border prose-pre:border-blue-400/15 prose-headings:text-white prose-strong:text-white prose-li:text-white/80"
                       components={{
                         p: ({node, ...props}) => <p className="mb-3 last:mb-0" {...props} />,
                         ul: ({node, ...props}) => <ul className="mb-3 space-y-1" {...props} />,
@@ -726,8 +724,8 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         strong: ({node, ...props}) => <strong className="font-semibold text-white" {...props} />,
                         code: ({node, inline, ...props}: any) => 
                           inline ? 
-                            <code className="px-1.5 py-0.5 rounded bg-white/10 text-indigo-300 text-xs font-mono" {...props} /> :
-                            <code className="block p-3 rounded-lg bg-black/40 border border-white/10 text-xs font-mono overflow-x-auto" {...props} />
+                            <code className="px-1.5 py-0.5 rounded bg-blue-500/15 text-indigo-300 text-xs font-mono" {...props} /> :
+                            <code className="block p-3 rounded-lg bg-black/40 border border-blue-400/15 text-xs font-mono overflow-x-auto" {...props} />
                       }}
                     >
                       {msg.content || ''}
@@ -744,7 +742,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                           <button
                             key={idx}
                             onClick={() => { setReportModalUrl(`${window.location.origin}${normalizedPath}`); setReportModalTitle(report.name || 'Report'); }}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 text-indigo-200 text-xs font-medium transition-all group"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-indigo-200 text-xs font-medium transition-all group"
                           >
                             <Sparkles className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
                             View {report.name} Report
@@ -756,7 +754,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   {msg.plots && msg.plots.length > 0 && (
                     <>
                       <div className="mt-4 space-y-3">
-                        <div className="text-xs font-semibold text-white/60 mb-2">
+                        <div className="text-xs font-semibold text-blue-100/60 mb-2">
                           📊 Generated Visualizations ({msg.plots.length})
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -785,17 +783,17 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           )}
           {isTyping && (
              <div className="flex gap-4">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-white/5 border border-white/10">
-                  <Bot className="w-4 h-4 text-indigo-400" />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-blue-500/10 border border-blue-400/15">
+                  <Bot className="w-4 h-4 text-blue-400" />
                 </div>
-                <div className="bg-white/[0.03] p-4 rounded-2xl border border-white/5">
+                <div className="bg-white/[0.03] p-4 rounded-2xl border border-blue-400/10">
                   <div className="flex items-center gap-3">
                     <div className="flex gap-1">
                       <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
                       <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
                       <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce"></span>
                     </div>
-                    <span className="text-sm text-white/60">
+                    <span className="text-sm text-blue-100/60">
                       {currentStep || '🔧 Starting analysis...'}
                     </span>
                   </div>
@@ -818,12 +816,12 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                />
                <label
                  htmlFor="file-upload"
-                 className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.03] border border-white/5 text-[10px] text-white/40 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+                 className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.03] border border-blue-400/10 text-[10px] text-blue-100/40 hover:text-white hover:bg-blue-500/10 transition-all cursor-pointer"
                >
                   <Upload className="w-3 h-3" /> Upload Dataset
                </label>
                {uploadedFile && (
-                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-[10px] text-indigo-200">
+                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/30 text-[10px] text-indigo-200">
                    <Paperclip className="w-3 h-3" />
                    <span className="max-w-[150px] truncate">{uploadedFile.name}</span>
                    <button onClick={removeFile} className="hover:text-white transition-colors">
@@ -842,8 +840,8 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     handleSend();
                   }
                 }}
-                placeholder={uploadedFile ? "Describe what you want to do with this dataset..." : "Ask your agent anything or upload a dataset..."}
-                className="w-full bg-[#0d0d0d] border border-white/10 rounded-2xl p-4 pr-16 text-sm min-h-[56px] max-h-48 resize-none focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all text-white/90 placeholder:text-white/20 shadow-2xl"
+                placeholder={uploadedFile ? "What insights do you want from this dataset?" : "Upload a dataset or ask about exploratory analysis..."}
+                className="w-full bg-[#0a1628] border border-blue-400/15 rounded-2xl p-4 pr-16 text-sm min-h-[56px] max-h-48 resize-none focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all text-white/90 placeholder:text-blue-100/20 shadow-2xl"
               />
               <button
                 onClick={handleSend}
@@ -852,14 +850,14 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   "absolute right-3 bottom-3 p-2.5 rounded-xl transition-all",
                   (input.trim() || uploadedFile) && !isTyping 
                     ? "bg-white text-black hover:scale-105 active:scale-95" 
-                    : "bg-white/5 text-white/20 cursor-not-allowed"
+                    : "bg-blue-500/10 text-white/20 cursor-not-allowed"
                 )}
               >
                 <Send className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-center mt-3 text-[10px] text-white/20 font-medium">
-              Enterprise Data Agent v3.1 | Secured with end-to-end encryption
+            <p className="text-center mt-3 text-[10px] text-blue-100/20 font-medium">
+              EDA Agent v1.0 | Autonomous Exploratory Data Analysis
             </p>
           </div>
         </div>
@@ -873,16 +871,16 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 320, opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="w-[320px] border-l border-white/5 bg-[#0a0a0a]/95 backdrop-blur-xl flex flex-col"
+            className="w-[320px] border-l border-blue-400/10 bg-[#0a1628]/95 backdrop-blur-xl flex flex-col"
           >
-            <div className="p-4 border-b border-white/5 flex items-center justify-between">
+            <div className="p-4 border-b border-blue-400/10 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Package className="w-5 h-5 text-emerald-400" />
                 <h3 className="font-bold text-sm">Assets</h3>
               </div>
               <button 
                 onClick={() => setShowAssets(false)}
-                className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                className="p-1.5 rounded-lg hover:bg-blue-500/10 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -922,7 +920,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       <div>
                         <div className="flex items-center gap-2 mb-3">
                           <BarChart3 className="w-4 h-4 text-emerald-400" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-white/60">Visualizations ({allPlots.length})</h4>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-blue-100/60">Visualizations ({allPlots.length})</h4>
                         </div>
                         <div className="space-y-2">
                           {allPlots.map((plot, idx) => {
@@ -938,13 +936,13 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                               <button
                                 key={idx}
                                 onClick={() => { setReportModalUrl(plotUrl || plot.url); setReportModalTitle(plot.title || 'Visualization'); }}
-                                className="w-full p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all text-left group"
+                                className="w-full p-3 rounded-lg bg-blue-500/10 border border-blue-400/15 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-all text-left group"
                               >
                                 <div className="flex items-center justify-between">
                                   <span className="text-sm text-white/80 truncate flex-1">{plot.title}</span>
-                                  <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-emerald-400 transition-all" />
+                                  <ChevronRight className="w-4 h-4 text-blue-100/40 group-hover:text-emerald-400 transition-all" />
                                 </div>
-                                <span className="text-xs text-white/40 mt-1 block">{plot.type || 'interactive'}</span>
+                                <span className="text-xs text-blue-100/40 mt-1 block">{plot.type || 'interactive'}</span>
                               </button>
                             );
                           })}\n                        </div>
@@ -956,7 +954,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       <div>
                         <div className="flex items-center gap-2 mb-3">
                           <FileText className="w-4 h-4 text-blue-400" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-white/60">Data Files ({uniqueDataFiles.length})</h4>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-blue-100/60">Data Files ({uniqueDataFiles.length})</h4>
                         </div>
                         <div className="space-y-2">
                           {uniqueDataFiles.map((file, idx) => {
@@ -975,13 +973,13 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                                 key={idx}
                                 href={downloadUrl}
                                 download={fileName}
-                                className="block w-full p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-blue-500/10 hover:border-blue-500/30 transition-all group"
+                                className="block w-full p-3 rounded-lg bg-blue-500/10 border border-blue-400/15 hover:bg-blue-500/10 hover:border-blue-500/30 transition-all group"
                               >
                                 <div className="flex items-center justify-between">
                                   <span className="text-sm text-white/80 truncate flex-1">{fileName}</span>
-                                  <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-blue-400 transition-all" />
+                                  <ChevronRight className="w-4 h-4 text-blue-100/40 group-hover:text-blue-400 transition-all" />
                                 </div>
-                                <span className="text-xs text-white/40 mt-1 block">Click to download</span>
+                                <span className="text-xs text-blue-100/40 mt-1 block">Click to download</span>
                               </a>
                             );
                           })}
@@ -994,7 +992,7 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       <div>
                         <div className="flex items-center gap-2 mb-3">
                           <FileText className="w-4 h-4 text-purple-400" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-white/60">Models ({uniqueModels.length})</h4>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-blue-100/60">Models ({uniqueModels.length})</h4>
                         </div>
                         <div className="space-y-2">
                           {uniqueModels.map((model, idx) => {
@@ -1023,13 +1021,13 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                                   link.download = `${model.toLowerCase().replace(/\s+/g, '_')}_model.pkl`;
                                   link.click();
                                 }}
-                                className="w-full p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-purple-500/10 hover:border-purple-500/30 transition-all text-left group"
+                                className="w-full p-3 rounded-lg bg-blue-500/10 border border-blue-400/15 hover:bg-purple-500/10 hover:border-purple-500/30 transition-all text-left group"
                               >
                                 <div className="flex items-center justify-between">
                                   <span className="text-sm text-white/80 truncate flex-1">{model}</span>
-                                  <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-purple-400 transition-all" />
+                                  <ChevronRight className="w-4 h-4 text-blue-100/40 group-hover:text-purple-400 transition-all" />
                                 </div>
-                                <span className="text-xs text-white/40 mt-1 block">Click to download</span>
+                                <span className="text-xs text-blue-100/40 mt-1 block">Click to download</span>
                               </button>
                             );
                           })}
@@ -1042,18 +1040,18 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       <div>
                         <div className="flex items-center gap-2 mb-3">
                           <FileText className="w-4 h-4 text-purple-400" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-white/60">Reports ({allReports.length})</h4>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-blue-100/60">Reports ({allReports.length})</h4>
                         </div>
                         <div className="space-y-2">
                           {allReports.map((report, idx) => (
                             <button
                               key={idx}
                               onClick={() => { setReportModalUrl(report.path); setReportModalTitle(report.name || 'Report'); }}
-                              className="w-full p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-purple-500/10 hover:border-purple-500/30 transition-all text-left group"
+                              className="w-full p-3 rounded-lg bg-blue-500/10 border border-blue-400/15 hover:bg-purple-500/10 hover:border-purple-500/30 transition-all text-left group"
                             >
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-white/80 truncate flex-1">{report.name}</span>
-                                <ChevronRight className="w-4 h-4 text-white/40 group-hover:text-purple-400 transition-all" />
+                                <ChevronRight className="w-4 h-4 text-blue-100/40 group-hover:text-purple-400 transition-all" />
                               </div>
                             </button>
                           ))}
@@ -1065,8 +1063,8 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     {allPlots.length === 0 && allReports.length === 0 && uniqueModels.length === 0 && (
                       <div className="flex flex-col items-center justify-center h-full text-center p-8">
                         <Package className="w-12 h-12 text-white/10 mb-3" />
-                        <p className="text-sm text-white/40 mb-1">No assets yet</p>
-                        <p className="text-xs text-white/30">Upload a dataset to generate visualizations and models</p>
+                        <p className="text-sm text-blue-100/40 mb-1">No assets yet</p>
+                        <p className="text-xs text-blue-100/30">Upload a dataset to generate visualizations and models</p>
                       </div>
                     )}
                   </>
@@ -1091,14 +1089,14 @@ export const ChatInterface: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#0a0a0a] border border-white/10 rounded-2xl w-full max-w-7xl h-[90vh] flex flex-col overflow-hidden shadow-2xl"
+              className="bg-[#0a1628] border border-blue-400/15 rounded-2xl w-full max-w-7xl h-[90vh] flex flex-col overflow-hidden shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between p-4 border-b border-white/5">
+              <div className="flex items-center justify-between p-4 border-b border-blue-400/10">
                 <h3 className="text-lg font-semibold text-white">{reportModalTitle}</h3>
                 <button
                   onClick={() => { setReportModalUrl(null); setReportModalTitle('Visualization'); }}
-                  className="p-2 rounded-lg hover:bg-white/5 transition-colors"
+                  className="p-2 rounded-lg hover:bg-blue-500/10 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
