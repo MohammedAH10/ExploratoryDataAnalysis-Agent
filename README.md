@@ -1,6 +1,6 @@
 ---
-title: Data Science Agent
-emoji: 🤖
+title: Exploratory Data Analysis Agent
+emoji:
 colorFrom: blue
 colorTo: purple
 sdk: docker
@@ -9,7 +9,7 @@ license: mit
 app_port: 7860
 ---
 
-# Data Science Agent 🤖
+# Exploratory Data Analysis Agent
 
 An intelligent AI agent for automated data science workflows, powered by Google Gemini 2.5 Flash with 82+ specialized tools for data analysis, visualization, and machine learning.
 
